@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, X, Loader2 } from 'lucide-react';
 import { SOPFile } from '@/types/sop';
+import { API_BASE_URL } from '@/services/sopApi';
 
 interface PDFPreviewModalProps {
   open: boolean;
@@ -26,10 +27,12 @@ export function PDFPreviewModal({ open, onClose, file, onDownload }: PDFPreviewM
     setLoading(false);
   };
 
+
+
   // Use the actual file URL from the backend
   // Append filename to URL so browser displays it in title/tab
   const pdfUrl = file
-    ? `http://localhost:8080/api/sops/view/${file.id}/${encodeURIComponent(file.fileName)}`
+    ? `${API_BASE_URL}/sops/view/${file.id}/${encodeURIComponent(file.fileName)}`
     : '';
 
   // Create iframe URL with zoom parameter

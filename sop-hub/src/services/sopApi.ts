@@ -1,13 +1,27 @@
 import { Brand, SOPFile } from '@/types/sop';
 
-export const API_BASE_URL = 'http://localhost:8080/api';
+export const API_BASE_URL = window.RUNTIME_CONFIG?.API_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://l02plappmon01.corp.local:8080/api';
+
+const handleResponse = async (response: Response, defaultMessage: string) => {
+  if (!response.ok) {
+    const errorText = await response.text();
+    let errorMessage = defaultMessage;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.message || errorJson.error || errorMessage;
+    } catch (e) {
+      if (errorText) errorMessage = errorText;
+    }
+    throw new Error(errorMessage);
+  }
+  return response.json();
+};
 
 export const sopApi = {
   // GET /api/sops?brand=xyz
   async getSOPs(brand: Brand): Promise<SOPFile[]> {
     const response = await fetch(`${API_BASE_URL}/sops?brand=${brand}`);
-    if (!response.ok) throw new Error('Failed to fetch SOPs');
-    return response.json();
+    return handleResponse(response, 'Failed to fetch SOPs');
   },
 
   // POST /api/sops/upload
@@ -23,20 +37,7 @@ export const sopApi = {
       body: formData,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage = 'Failed to upload SOP';
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.message || errorJson.error || errorMessage;
-      } catch (e) {
-        // use raw text if not json
-        if (errorText) errorMessage = errorText;
-      }
-      throw new Error(errorMessage);
-    }
-
-    return response.json();
+    return handleResponse(response, 'Failed to upload SOP');
   },
 
   // PUT /api/sops/{id}
@@ -54,8 +55,7 @@ export const sopApi = {
       body: formData,
     });
 
-    if (!response.ok) throw new Error('Failed to update SOP');
-    return response.json();
+    return handleResponse(response, 'Failed to update SOP');
   },
 
   // DELETE /api/sops/{id}
@@ -64,6 +64,8 @@ export const sopApi = {
       method: 'DELETE',
     });
 
-    if (!response.ok) throw new Error('Failed to delete SOP');
+    if (!response.ok) {
+      await handleResponse(response, 'Failed to delete SOP');
+    }
   },
 };

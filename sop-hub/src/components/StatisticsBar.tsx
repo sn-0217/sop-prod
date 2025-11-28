@@ -52,8 +52,8 @@ export function StatisticsBar({ files }: StatisticsBarProps) {
           className="bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-md transition-all duration-200 group relative overflow-hidden"
         >
           <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 bg-gradient-to-br ${index === 0 ? 'from-primary to-transparent' :
-              index === 1 ? 'from-violet-500 to-transparent' :
-                'from-muted-foreground to-transparent'
+            index === 1 ? 'from-violet-500 to-transparent' :
+              'from-muted-foreground to-transparent'
             }`} />
 
           <div className="flex items-center gap-4 relative z-10">

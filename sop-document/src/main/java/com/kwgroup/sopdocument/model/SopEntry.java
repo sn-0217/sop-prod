@@ -19,7 +19,6 @@ public class SopEntry {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(unique = true)
     private String fileName;
     private String filePath;
     private long fileSize;
