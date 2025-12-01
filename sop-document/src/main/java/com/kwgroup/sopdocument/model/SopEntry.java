@@ -26,6 +26,10 @@ public class SopEntry {
     private String fileCategory;
     private String brand;
 
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String pdfContent;
+
     private String uploadedBy;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;

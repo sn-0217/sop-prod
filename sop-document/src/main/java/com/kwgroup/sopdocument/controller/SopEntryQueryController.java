@@ -4,6 +4,7 @@ import com.kwgroup.sopdocument.dto.SopEntryResponse;
 import com.kwgroup.sopdocument.mapper.SopMapper;
 import com.kwgroup.sopdocument.model.SopEntry;
 import com.kwgroup.sopdocument.repository.SopEntryRepository;
+import com.kwgroup.sopdocument.service.PdfSearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
@@ -27,6 +28,7 @@ public class SopEntryQueryController {
 
     private final SopEntryRepository sopEntryRepository;
     private final SopMapper sopMapper;
+    private final PdfSearchService pdfSearchService;
 
     /**
      * Return all SOP entries as JSON.
@@ -70,6 +72,33 @@ public class SopEntryQueryController {
         return sopEntryRepository.findById(id)
                 .<ResponseEntity<Object>>map(entry -> servePdfResource(entry, false))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("SOP Entry not found"));
+    }
+
+    /**
+     * Search SOPs by PDF content.
+     * Example: GET /api/sops/search?q=safety&brand=knitwell&category=production
+     */
+    @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<SopEntryResponse>> searchByContent(
+            @RequestParam(name = "q", required = true) String query,
+            @RequestParam(name = "brand", required = false) String brand,
+            @RequestParam(name = "category", required = false) String category) {
+
+        if (query == null || query.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<SopEntryResponse> results;
+
+        if (brand != null && !brand.isBlank()) {
+            results = pdfSearchService.searchByContentAndBrand(query, brand);
+        } else if (category != null && !category.isBlank()) {
+            results = pdfSearchService.searchByContentAndCategory(query, category);
+        } else {
+            results = pdfSearchService.searchByContent(query);
+        }
+
+        return ResponseEntity.ok(results);
     }
 
     /* ---------- helpers ---------- */

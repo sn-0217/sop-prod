@@ -10,6 +10,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -45,6 +46,7 @@ public class SopEntryService {
 
     private final SopEntryRepository sopEntryRepository;
     private final SopMapper sopMapper;
+    private final PdfContentIndexService pdfContentIndexService;
 
     @Value("${sop.storage.path.knitwell}")
     private String knitwellBase;
@@ -82,6 +84,7 @@ public class SopEntryService {
      * @return SopEntryResponse of saved/updated entity
      */
     @Transactional
+    @CacheEvict(value = { "pdfSearchResults", "pdfContent" }, allEntries = true)
     public SopEntryResponse save(SopEntryRequest sopEntryRequest, MultipartFile file) {
         // 1. validate uploaded file
         if (file == null || file.isEmpty()) {
@@ -208,6 +211,14 @@ public class SopEntryService {
         }
 
         SopEntry saved = sopEntryRepository.save(toSave);
+
+        // Extract and index PDF content asynchronously
+        try {
+            pdfContentIndexService.indexSopEntry(saved);
+        } catch (Exception e) {
+            log.warn("Failed to index PDF content for entry: {}", saved.getId(), e);
+        }
+
         return sopMapper.toDto(saved);
     }
 
@@ -219,6 +230,7 @@ public class SopEntryService {
      * @return SopEntryResponse of updated entity
      */
     @Transactional
+    @CacheEvict(value = { "pdfSearchResults", "pdfContent" }, allEntries = true)
     public SopEntryResponse update(String id, SopEntryUpdateRequest sopEntryUpdateRequest) {
         SopEntry existing = sopEntryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("SOP entry not found with id: " + id));
@@ -329,6 +341,16 @@ public class SopEntryService {
 
         existing.setModifiedAt(LocalDateTime.now());
         SopEntry saved = sopEntryRepository.save(existing);
+
+        // Re-index PDF content if file was replaced
+        if (sopEntryUpdateRequest.getFile() != null && !sopEntryUpdateRequest.getFile().isEmpty()) {
+            try {
+                pdfContentIndexService.indexSopEntry(saved);
+            } catch (Exception e) {
+                log.warn("Failed to re-index PDF content for entry: {}", saved.getId(), e);
+            }
+        }
+
         return sopMapper.toDto(saved);
     }
 
@@ -338,6 +360,7 @@ public class SopEntryService {
      * @param id the ID of the SOP entry to delete
      */
     @Transactional
+    @CacheEvict(value = { "pdfSearchResults", "pdfContent" }, allEntries = true)
     public void delete(String id) {
         SopEntry existing = sopEntryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("SOP entry not found with id: " + id));

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { sopApi } from '@/services/sopApi';
-import { Upload, FileText, Search, Italic } from 'lucide-react';
+import { Upload, FileText, Search, Italic, FileSearch, X } from 'lucide-react';
 import { API_BASE_URL } from '@/services/sopApi';
 import { BrandOverview } from '@/components/BrandOverview';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -22,6 +22,8 @@ const Index = () => {
   const [selectedBrand, setSelectedBrand] = useState<BrandFilter>('home');
   const [files, setFiles] = useState<SOPFile[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchMode, setSearchMode] = useState<'filename' | 'content'>('filename');
+  const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -55,6 +57,50 @@ const Index = () => {
       setLoading(false);
     }
   };
+
+  const handleSearch = async (query: string) => {
+    if (!query || query.trim().length === 0) {
+      loadFiles();
+      return;
+    }
+
+    if (searchMode === 'content') {
+      setSearching(true);
+      try {
+        const brand = selectedBrand === 'home' ? undefined : selectedBrand;
+        const results = await sopApi.searchSOPsByContent(query, brand);
+        setFiles(results);
+        toast.success(`Found ${results.length} document${results.length !== 1 ? 's' : ''}`);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to search SOPs');
+        setFiles([]);
+      } finally {
+        setSearching(false);
+      }
+    } else {
+      // Filename search (existing behavior - reload and filter client-side)
+      loadFiles();
+    }
+  };
+
+  // Debounce content search and handle empty query
+  useEffect(() => {
+    if (searchMode === 'content') {
+      if (!searchQuery) {
+        loadFiles();
+      } else {
+        const timer = setTimeout(() => {
+          handleSearch(searchQuery);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [searchQuery]);
+
+  // Reload files when switching search modes to ensure consistent state
+  useEffect(() => {
+    loadFiles();
+  }, [searchMode]);
 
   const handleUpload = async (files: File[], brand: Brand, metadata: { fileCategory: string; uploadedBy: string }) => {
     setUploading(true);
@@ -140,9 +186,9 @@ const Index = () => {
     }
   };
 
-  const filteredFiles = files.filter(file =>
-    file.fileName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredFiles = searchMode === 'content'
+    ? files
+    : files.filter(file => file.fileName.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -172,14 +218,42 @@ const Index = () => {
               </div>
 
               <div className="flex items-center gap-3 flex-1 justify-end max-w-2xl">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search documents..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 h-10 bg-background border-border shadow-sm"
-                  />
+                <div className="flex items-center gap-2 flex-1 max-w-md">
+                  <div className="relative flex-1">
+                    {searching && searchMode === 'content' && (
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4">
+                        <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )}
+                    {!searching && (
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    )}
+                    <Input
+                      placeholder={searchMode === 'content' ? 'Search PDF content...' : 'Search documents...'}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 pr-9 h-10 bg-background border-border shadow-sm"
+                      disabled={searching}
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        title="Clear search"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <Button
+                    onClick={() => setSearchMode(searchMode === 'filename' ? 'content' : 'filename')}
+                    variant={searchMode === 'content' ? 'default' : 'outline'}
+                    size="icon"
+                    className="h-10 w-10 shrink-0"
+                    title={searchMode === 'content' ? 'Searching PDF content' : 'Click to search PDF content'}
+                  >
+                    <FileSearch className="h-4 w-4" />
+                  </Button>
                 </div>
 
                 <ThemeToggle />

@@ -68,4 +68,14 @@ export const sopApi = {
       await handleResponse(response, 'Failed to delete SOP');
     }
   },
+
+  // GET /api/sops/search?q=query&brand=xyz&category=abc
+  async searchSOPsByContent(query: string, brand?: string, category?: string): Promise<SOPFile[]> {
+    const params = new URLSearchParams({ q: query });
+    if (brand) params.append('brand', brand);
+    if (category) params.append('category', category);
+
+    const response = await fetch(`${API_BASE_URL}/sops/search?${params.toString()}`);
+    return handleResponse(response, 'Failed to search SOPs by content');
+  },
 };
