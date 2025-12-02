@@ -207,7 +207,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                 onClick={() => handleSort('modifiedAt')}
               >
                 <div className="flex items-center">
-                  Last Updated
+                  Modified Time
                   <SortIcon columnKey="modifiedAt" />
                 </div>
               </TableHead>

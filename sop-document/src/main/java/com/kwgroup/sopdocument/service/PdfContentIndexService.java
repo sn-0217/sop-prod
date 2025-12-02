@@ -67,7 +67,8 @@ public class PdfContentIndexService {
                 return text != null ? text.trim() : "";
             }
         } catch (IOException e) {
-            log.error("Failed to extract text from PDF: {}", path, e);
+            // Log warning for corrupt/unreadable PDFs without stack trace to avoid noise
+            log.warn("Could not extract text from PDF (likely corrupt or password protected): {} - {}", path.getFileName(), e.getMessage());
             return "";
         } catch (Exception e) {
             log.error("Unexpected error while extracting PDF text: {}", path, e);

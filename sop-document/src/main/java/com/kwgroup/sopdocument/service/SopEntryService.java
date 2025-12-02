@@ -47,6 +47,10 @@ public class SopEntryService {
     private final SopEntryRepository sopEntryRepository;
     private final SopMapper sopMapper;
     private final PdfContentIndexService pdfContentIndexService;
+    private final EmailService emailService;
+
+    @Value("${sop.notification.admin-email}")
+    private String adminEmail;
 
     @Value("${sop.storage.path.knitwell}")
     private String knitwellBase;
@@ -219,6 +223,9 @@ public class SopEntryService {
             log.warn("Failed to index PDF content for entry: {}", saved.getId(), e);
         }
 
+        // Send notification
+        sendNotification("SOP Uploaded: " + saved.getFileName(), "A new SOP has been uploaded.", saved);
+
         return sopMapper.toDto(saved);
     }
 
@@ -351,6 +358,9 @@ public class SopEntryService {
             }
         }
 
+        // Send notification
+        sendNotification("SOP Updated: " + saved.getFileName(), "An existing SOP has been updated.", saved);
+
         return sopMapper.toDto(saved);
     }
 
@@ -379,6 +389,9 @@ public class SopEntryService {
 
         sopEntryRepository.delete(existing);
         log.info("Deleted SOP entry with id: {}", id);
+
+        // Send notification
+        sendNotification("SOP Deleted: " + existing.getFileName(), "An SOP has been deleted.", existing);
     }
 
     /* ---------- helper methods ---------- */
@@ -418,5 +431,22 @@ public class SopEntryService {
         String replaced = NON_WORD_PATTERN.matcher(baseName).replaceAll(" ").trim();
         replaced = replaced.replaceAll("\\s{2,}", " ");
         return replaced;
+    }
+
+    private void sendNotification(String title, String message, SopEntry sopEntry) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("title", title);
+        variables.put("message", message);
+
+        Map<String, String> details = new HashMap<>();
+        details.put("File Name", sopEntry.getFileName());
+        details.put("Brand", sopEntry.getBrand());
+        details.put("Category", sopEntry.getFileCategory());
+        details.put("Uploaded By", sopEntry.getUploadedBy());
+        details.put("Time", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+
+        variables.put("details", details);
+
+        emailService.sendHtmlEmail(adminEmail, title, "email-template", variables);
     }
 }
