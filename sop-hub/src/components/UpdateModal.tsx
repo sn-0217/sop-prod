@@ -215,7 +215,14 @@ export function UpdateModal({ open, onClose, file, onUpdate, updating }: UpdateM
           </Button>
           <Button
             onClick={handleUpdate}
-            disabled={updating || !fileCategory || !uploadedBy}
+            disabled={
+              updating ||
+              !fileCategory ||
+              !uploadedBy ||
+              (fileCategory === (file?.fileCategory || '') &&
+                uploadedBy === (file?.uploadedBy || '') &&
+                files.length === 0)
+            }
             className="h-10 px-6 min-w-[100px]"
           >
             {updating ? (
