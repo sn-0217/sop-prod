@@ -175,6 +175,9 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                   </div>
                 </TableHead>
               )}
+              <TableHead className="font-semibold text-foreground">
+                Version
+              </TableHead>
               <TableHead
                 className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={() => handleSort('fileCategory')}
@@ -219,7 +222,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
               <Fragment key={groupName}>
                 {groupBy !== 'none' && (
                   <TableRow key={`group-${groupName}`} className="bg-muted/50 hover:bg-muted/50">
-                    <TableCell colSpan={showBrandColumn ? 7 : 6} className="font-semibold py-2">
+                    <TableCell colSpan={showBrandColumn ? 8 : 7} className="font-semibold py-2">
                       <div className="flex items-center gap-2">
                         <span className="capitalize">{groupName}</span>
                         <span className="text-xs font-normal text-muted-foreground bg-background px-2 py-0.5 rounded-full border border-border">
@@ -256,6 +259,15 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                         </Badge>
                       </TableCell>
                     )}
+                    <TableCell>
+                      {file.version ? (
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {file.version}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {file.fileCategory ? (
                         <Badge variant="secondary" className="font-normal">

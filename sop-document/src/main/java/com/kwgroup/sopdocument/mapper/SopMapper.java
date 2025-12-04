@@ -7,18 +7,18 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class SopMapper {
-    public SopEntry toEntity(SopEntryRequest request){
+    public SopEntry toEntity(SopEntryRequest request) {
         return SopEntry.builder()
                 .fileCategory(request.getFileCategory())
                 .brand(request.getBrand())
                 .uploadedBy(
                         (request.getUploadedBy() == null || request.getUploadedBy().isBlank())
                                 ? "admin"
-                                : request.getUploadedBy()
-                )
+                                : request.getUploadedBy())
                 .build();
     }
-    public SopEntryResponse toDto(SopEntry entry){
+
+    public SopEntryResponse toDto(SopEntry entry) {
         return SopEntryResponse.builder()
                 .id(entry.getId())
                 .fileName(entry.getFileName())
@@ -29,6 +29,7 @@ public class SopMapper {
                 .uploadedBy(entry.getUploadedBy())
                 .createdAt(entry.getCreatedAt())
                 .modifiedAt(entry.getModifiedAt())
+                .version(entry.getVersion())
                 .build();
     }
 }

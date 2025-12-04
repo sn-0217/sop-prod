@@ -11,4 +11,5 @@ export interface SOPFile {
   uploadedBy: string;
   createdAt: string;
   modifiedAt: string;
+  version?: string; // e.g., "v1", "v2", "v3"
 }

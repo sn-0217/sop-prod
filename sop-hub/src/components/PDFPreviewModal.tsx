@@ -56,7 +56,14 @@ export function PDFPreviewModal({ open, onClose, file, onDownload }: PDFPreviewM
       <DialogContent className="max-w-[95vw] h-[95vh] flex flex-col p-0">
         <DialogHeader className="px-6 py-4 border-b border-border">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg">{file?.fileName}</DialogTitle>
+            <div className="flex items-center gap-3">
+              <DialogTitle className="text-lg">{file?.fileName}</DialogTitle>
+              {file?.version && (
+                <span className="px-2 py-0.5 text-xs font-semibold bg-primary/10 text-primary rounded-md border border-primary/20">
+                  {file.version}
+                </span>
+              )}
+            </div>
           </div>
         </DialogHeader>
 

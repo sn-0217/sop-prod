@@ -34,6 +34,8 @@ public class SopEntry {
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
 
+    private String version; // e.g., "v1", "v2", "v3"
+
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();

@@ -41,11 +41,18 @@ export const sopApi = {
   },
 
   // PUT /api/sops/{id}
-  async updateSOP(id: string, metadata: { fileCategory: string; brand: string; uploadedBy: string }, file?: File): Promise<SOPFile> {
+  async updateSOP(
+    id: string,
+    metadata: { fileCategory: string; brand: string; uploadedBy: string; versionUpdateType?: 'MAJOR' | 'MINOR' },
+    file?: File
+  ): Promise<SOPFile> {
     const formData = new FormData();
     formData.append('fileCategory', metadata.fileCategory);
     formData.append('brand', metadata.brand);
     formData.append('uploadedBy', metadata.uploadedBy);
+    if (metadata.versionUpdateType) {
+      formData.append('versionUpdateType', metadata.versionUpdateType);
+    }
     if (file) {
       formData.append('file', file);
     }

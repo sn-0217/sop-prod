@@ -165,3 +165,6 @@ Caused by: org.h2.mvstore.MVStoreException: The file is locked: E:/ide projects/
 	at org.h2.mvstore.SingleFileStore.open(SingleFileStore.java:81)
 	at org.h2.mvstore.MVStore.<init>(MVStore.java:286)
 	... 139 more
+2025-12-04 18:48:57.782796+05:30 jdbc[14]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "[*]history"; expected "HELP"; SQL statement:
+history [42001-232]
