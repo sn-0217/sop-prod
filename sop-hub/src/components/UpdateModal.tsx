@@ -70,7 +70,12 @@ export function UpdateModal({ open, onClose, file, onUpdate, updating }: UpdateM
         major++;
         minor = 0;
       } else {
-        minor++;
+        if (minor === 9) {
+          major++;
+          minor = 0;
+        } else {
+          minor++;
+        }
       }
 
       return `v${major}.${minor}`;

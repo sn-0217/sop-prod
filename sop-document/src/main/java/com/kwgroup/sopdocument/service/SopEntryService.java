@@ -474,7 +474,12 @@ public class SopEntryService {
                 major++;
                 minor = 0;
             } else {
-                minor++;
+                if (minor == 9) {
+                    major++;
+                    minor = 0;
+                } else {
+                    minor++;
+                }
             }
 
             return "v" + major + "." + minor;

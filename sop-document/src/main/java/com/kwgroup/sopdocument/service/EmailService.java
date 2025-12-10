@@ -1,9 +1,10 @@
 package com.kwgroup.sopdocument.service;
 
 import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -17,12 +18,17 @@ import java.io.OutputStream;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class EmailService {
 
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
+
+    @Autowired
+    public EmailService(@Autowired(required = false) JavaMailSender mailSender, TemplateEngine templateEngine) {
+        this.mailSender = mailSender;
+        this.templateEngine = templateEngine;
+    }
 
     @Value("${spring.mail.username}")
     private String fromEmail;
@@ -42,9 +48,27 @@ public class EmailService {
             log.info("Email notifications are disabled. Skipping email to: {}", to);
             return;
         }
+
         log.info("Sending email to: {} using provider: {}", to, mailProvider);
+
         try {
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            // Validate provider configuration
+            if ("smtp".equalsIgnoreCase(mailProvider) && mailSender == null) {
+                log.error(
+                        "SMTP provider selected but JavaMailSender is not configured. Please check your mail configuration.");
+                return;
+            }
+
+            // Create MimeMessage based on provider
+            MimeMessage mimeMessage;
+            if ("sendmail".equalsIgnoreCase(mailProvider)) {
+                // For sendmail, create a Session-less MimeMessage
+                mimeMessage = new MimeMessage((Session) null);
+            } else {
+                // For SMTP, use JavaMailSender to create MimeMessage
+                mimeMessage = mailSender.createMimeMessage();
+            }
+
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
             Context context = new Context();

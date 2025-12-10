@@ -25,9 +25,9 @@ interface SOPTableProps {
   showBrandColumn?: boolean;
 }
 
-type SortKey = 'fileName' | 'fileCategory' | 'uploadedBy' | 'fileSize' | 'modifiedAt' | 'brand';
+type SortKey = 'fileName' | 'fileCategory' | 'uploadedBy' | 'fileSize' | 'modifiedAt' | 'brand' | 'version';
 type SortDirection = 'asc' | 'desc';
-type GroupBy = 'none' | 'brand' | 'fileCategory' | 'uploadedBy' | 'modifiedAt';
+type GroupBy = 'none' | 'brand' | 'fileCategory' | 'uploadedBy' | 'modifiedAt' | 'version';
 
 interface SortConfig {
   key: SortKey;
@@ -54,6 +54,25 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
       // Handle null/undefined values
       if (aValue === null || aValue === undefined) aValue = '';
       if (bValue === null || bValue === undefined) bValue = '';
+
+      // Special handling for version sorting
+      if (key === 'version') {
+        // Remove 'v' prefix and split by '.'
+        const parseVersion = (v: string) => {
+          if (!v) return [0, 0];
+          const clean = v.toLowerCase().replace('v', '');
+          const parts = clean.split('.').map(Number);
+          return parts.length === 2 ? parts : [Number(clean) || 0, 0];
+        };
+
+        const [aMajor, aMinor] = parseVersion(String(aValue));
+        const [bMajor, bMinor] = parseVersion(String(bValue));
+
+        if (aMajor !== bMajor) {
+          return direction === 'asc' ? aMajor - bMajor : bMajor - aMajor;
+        }
+        return direction === 'asc' ? aMinor - bMinor : bMinor - aMinor;
+      }
 
       // Case-insensitive string comparison
       if (typeof aValue === 'string') {
@@ -145,6 +164,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
               <SelectItem value="brand">Brand</SelectItem>
               <SelectItem value="fileCategory">Category</SelectItem>
               <SelectItem value="uploadedBy">Uploaded By</SelectItem>
+              <SelectItem value="version">Version</SelectItem>
               <SelectItem value="modifiedAt">Last Updated</SelectItem>
             </SelectContent>
           </Select>
@@ -175,8 +195,14 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                   </div>
                 </TableHead>
               )}
-              <TableHead className="font-semibold text-foreground">
-                Version
+              <TableHead
+                className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSort('version')}
+              >
+                <div className="flex items-center">
+                  Version
+                  <SortIcon columnKey="version" />
+                </div>
               </TableHead>
               <TableHead
                 className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"

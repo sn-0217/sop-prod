@@ -11,12 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { sopApi } from '@/services/sopApi';
-import { Upload, FileText, Search, Italic, FileSearch, X } from 'lucide-react';
+import { Upload, FileText, Search, Italic, FileSearch, X, Info } from 'lucide-react';
 import { API_BASE_URL } from '@/services/sopApi';
 import { BrandOverview } from '@/components/BrandOverview';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ScrollToTop } from '@/components/ScrollToTop';
 import { TableSkeleton, StatsSkeleton, BrandOverviewSkeleton } from '@/components/SkeletonLoaders';
+import { AboutDialog } from '@/components/AboutDialog';
 
 const Index = () => {
   const [selectedBrand, setSelectedBrand] = useState<BrandFilter>('home');
@@ -34,6 +35,7 @@ const Index = () => {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<SOPFile | null>(null);
 
   // Load files for selected brand
@@ -256,6 +258,17 @@ const Index = () => {
                   </Button>
                 </div>
 
+                {/* About Button */}
+                <Button
+                  onClick={() => setAboutDialogOpen(true)}
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                  title="About"
+                >
+                  <Info className="h-4 w-4" />
+                </Button>
+
                 <ThemeToggle />
 
                 <Button
@@ -331,19 +344,14 @@ const Index = () => {
           </div>
         </div>
 
-        <footer className="mt-auto border-t border-border/50 bg-gradient-to-b from-background via-background to-muted/10">
-          <div className="py-8">
-            <p className="text-sm text-muted-foreground/70 flex items-center justify-center gap-3">
+        <footer className="mt-auto border-t border-border">
+          <div className="py-6">
+            <p className="text-sm text-muted-foreground flex items-center justify-center gap-3">
               <span className="flex items-center gap-2">
                 <span className="h-px w-20 bg-gradient-to-r from-transparent via-border to-border"></span>
                 <span className="text-muted-foreground/60">✘</span>
               </span>
-              Crafted with
-              <span className="text-red-500 animate-pulse inline-block">💜</span>
-              by
-              <span className="font-semibold bg-gradient-to-r from-purple-600 via-pink-500 to-purple-400 bg-clip-text text-transparent">
-                𝓢𝓪𝓷𝓽𝓱𝓾 . 𝓢𝓝
-              </span>
+              © {new Date().getFullYear()} Apptech | Knitwell Group | Developed with <span className="text-red-500">💜</span> by <span className="font-semibold bg-gradient-to-r from-purple-600 via-pink-500 to-purple-400 bg-clip-text text-transparent">𝓢𝓪𝓷𝓽𝓱𝓾 . 𝓢𝓝</span>
               <span className="flex items-center gap-2">
                 <span className="text-muted-foreground/60">✘</span>
                 <span className="h-px w-20 bg-gradient-to-l from-transparent via-border to-border"></span>
@@ -392,6 +400,11 @@ const Index = () => {
         file={selectedFile}
         onConfirm={handleDelete}
         deleting={deleting}
+      />
+
+      <AboutDialog
+        open={aboutDialogOpen}
+        onClose={() => setAboutDialogOpen(false)}
       />
 
       <ScrollToTop />
