@@ -33,6 +33,9 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    @Value("${spring.mail.from-name:SOP Management System}")
+    private String fromName;
+
     @Value("${sop.notification.enabled:true}")
     private boolean emailEnabled;
 
@@ -75,7 +78,10 @@ public class EmailService {
             context.setVariables(variables);
             String htmlContent = templateEngine.process(templateName, context);
 
-            helper.setFrom(fromEmail, "SOP Notification Service");
+            // Set From address with display name (works for both sendmail and SMTP)
+            helper.setFrom(fromEmail, fromName);
+            log.debug("Setting From address: \"{}\" <{}>", fromName, fromEmail);
+
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
@@ -85,7 +91,7 @@ public class EmailService {
             } else {
                 mailSender.send(mimeMessage);
             }
-            log.info("Email sent successfully to: {}", to);
+            log.info("Email sent successfully to: {} from: {}", to, fromEmail);
         } catch (MessagingException | IOException | InterruptedException e) {
             log.error("Failed to send email to: {}", to, e);
         }
@@ -93,7 +99,11 @@ public class EmailService {
 
     private void sendWithSendmail(MimeMessage mimeMessage, String to)
             throws IOException, InterruptedException, MessagingException {
-        ProcessBuilder processBuilder = new ProcessBuilder(sendmailPath, "-t", "-i");
+        // Use -f flag to explicitly set the sender (envelope from)
+        // -t: Read message for recipients
+        // -i: Ignore dots alone on lines
+        // -f: Set the sender address
+        ProcessBuilder processBuilder = new ProcessBuilder(sendmailPath, "-t", "-i", "-f", fromEmail);
         Process process = processBuilder.start();
 
         try (OutputStream outputStream = process.getOutputStream()) {
@@ -104,5 +114,7 @@ public class EmailService {
         if (exitCode != 0) {
             throw new IOException("Sendmail process exited with error code: " + exitCode);
         }
+
+        log.debug("Sendmail process completed successfully with sender: {}", fromEmail);
     }
 }
