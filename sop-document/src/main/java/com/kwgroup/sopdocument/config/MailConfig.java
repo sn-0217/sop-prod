@@ -1,15 +1,19 @@
 package com.kwgroup.sopdocument.config;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 
 import java.util.Properties;
 
 @Configuration
+@EnableAutoConfiguration(exclude = { MailSenderAutoConfiguration.class })
+@ConditionalOnProperty(name = "sop.mail.provider", havingValue = "smtp", matchIfMissing = true)
 public class MailConfig {
 
     @Value("${spring.mail.host:}")
@@ -40,7 +44,6 @@ public class MailConfig {
     private int writeTimeout;
 
     @Bean
-    @ConditionalOnProperty(name = "sop.mail.provider", havingValue = "smtp", matchIfMissing = true)
     public JavaMailSender javaMailSender() {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
         mailSender.setHost(host);
