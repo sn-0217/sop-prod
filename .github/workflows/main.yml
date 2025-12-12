@@ -1,23 +1,17 @@
-name: Build & Release (v3)
+name: Build on main — sop-document
 
-# Trigger only on pushes to branch v3 (can also add workflow_dispatch)
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
-permissions:
-  contents: write   # needed to create tags/releases
-  packages: write
-
 jobs:
-  build-and-release:
+  build:
     runs-on: ubuntu-latest
     env:
       MAVEN_OPTS: -Xmx2g
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -26,74 +20,33 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'       # change to 11 or 17 if needed
+          java-version: '17'
           cache: maven
 
       - name: Cache Maven repository
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
-          key: maven-${{ hashFiles('**/pom.xml') }}
+          key: maven-${{ hashFiles('sop-document/pom.xml') }}
           restore-keys: |
             maven-
 
-      - name: Build with Maven (package)
-        id: mvn_package
+      - name: Build sop-document (maven package)
+        working-directory: sop-document
         run: mvn -B -e -U clean package
 
-      - name: Determine artifact & version
-        id: get_version
+      - name: Find built jar
+        id: find_jar
         run: |
-          # Grab Maven project version (works for multi-module root POM too)
-          VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive org.codehaus.mojo:exec-maven-plugin:3.1.0:exec)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-          # Try to find the produced jar (Spring Boot fat jar convention)
-          ARTIFACT=$(find target -maxdepth 1 -type f -name "*-SNAPSHOT.jar" -o -name "*.jar" | head -n 1)
-          if [ -z "$ARTIFACT" ]; then
-            # fallback: any jar in target
-            ARTIFACT=$(find target -maxdepth 1 -type f -name "*.jar" | head -n 1)
-          fi
-          if [ -z "$ARTIFACT" ]; then
-            echo "No jar found in target/ — failing."
+          JAR=$(find sop-document/target -maxdepth 1 -type f -name "*.jar" | head -n 1)
+          if [ -z "$JAR" ]; then
+            echo "No jar found" >&2
             exit 1
           fi
-          echo "artifact_path=$ARTIFACT" >> $GITHUB_OUTPUT
-          echo "artifact_name=$(basename "$ARTIFACT")" >> $GITHUB_OUTPUT
+          echo "jar_path=$JAR" >> $GITHUB_OUTPUT
 
-      - name: Create tag (optional)
-        if: ${{ always() }}
-        id: tag
-        run: |
-          TAG=v3-${{ steps.get_version.outputs.version }}-${GITHUB_SHA::8}
-          echo "TAG=$TAG" >> $GITHUB_OUTPUT
-
-          # create annotated tag and push it (requires write permissions)
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "Release $TAG"
-          git push origin "$TAG"
-
-      - name: Create GitHub Release and upload artifact
-        uses: actions/create-release@v1
-        id: create_release
+      - name: Upload jar as artifact
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ steps.tag.outputs.TAG }}
-          release_name: Release ${{ steps.get_version.outputs.version }} (v3)
-          body: |
-            Automated release created by GitHub Actions for branch v3.
-            Built commit: ${{ github.sha }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload release asset (jar)
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.get_version.outputs.artifact_path }}
-          asset_name: ${{ steps.get_version.outputs.artifact_name }}
-          asset_content_type: application/java-archive
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: sop-document-jar
+          path: ${{ steps.find_jar.outputs.jar_path }}
