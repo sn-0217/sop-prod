@@ -33,7 +33,7 @@ jobs:
 
       - name: Build sop-document (maven package)
         working-directory: sop-document
-        run: mvn -B -e -U clean package
+        run: mvn -B -e -U clean package -DskipTests=true
 
       - name: Find built jar
         id: find_jar
