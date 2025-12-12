@@ -4,7 +4,7 @@ name: Build & Release (v3)
 on:
   push:
     branches:
-      - v3
+      - main
   workflow_dispatch:
 
 permissions:
