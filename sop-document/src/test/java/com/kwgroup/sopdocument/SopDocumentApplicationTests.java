@@ -10,4 +10,11 @@ class SopDocumentApplicationTests {
 	void contextLoads() {
 	}
 
+	@Test
+	void testTimezoneIsIST() {
+		java.util.TimeZone timeZone = java.util.TimeZone.getDefault();
+		org.junit.jupiter.api.Assertions.assertEquals("Asia/Kolkata", timeZone.getID(),
+				"Timezone should be Asia/Kolkata");
+	}
+
 }

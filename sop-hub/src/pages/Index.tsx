@@ -11,13 +11,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { sopApi } from '@/services/sopApi';
-import { Upload, FileText, Search } from 'lucide-react';
+import { Upload, FileText, Search, Italic, FileSearch, X, Info } from 'lucide-react';
 import { API_BASE_URL } from '@/services/sopApi';
+import { BrandOverview } from '@/components/BrandOverview';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { ScrollToTop } from '@/components/ScrollToTop';
+import { TableSkeleton, StatsSkeleton, BrandOverviewSkeleton } from '@/components/SkeletonLoaders';
+import { AboutDialog } from '@/components/AboutDialog';
 
 const Index = () => {
   const [selectedBrand, setSelectedBrand] = useState<BrandFilter>('home');
   const [files, setFiles] = useState<SOPFile[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchMode, setSearchMode] = useState<'filename' | 'content'>('filename');
+  const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -28,6 +35,7 @@ const Index = () => {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<SOPFile | null>(null);
 
   // Load files for selected brand
@@ -38,17 +46,6 @@ const Index = () => {
   const loadFiles = async () => {
     setLoading(true);
     try {
-      // If home is selected, we fetch all files (API returns all by default)
-      // If a specific brand is selected, we filter on the client side
-      // Note: sopApi.getSOPs takes a brand, but we can pass 'home' or modify api to accept optional brand
-      // Since backend returns all, we just need to filter if brand != home
-
-      // We need to cast selectedBrand to Brand if it's not home, but getSOPs expects Brand.
-      // Actually, getSOPs sends ?brand=... which backend ignores.
-      // So we can just call it with any string or update getSOPs.
-      // Let's just pass 'knitwell' as dummy if home, or update getSOPs signature.
-      // Better: update getSOPs to accept string or optional brand.
-      // For now, I'll cast it, knowing backend ignores it.
       const data = await sopApi.getSOPs(selectedBrand === 'home' ? 'knitwell' : selectedBrand);
 
       let filteredData = data;
@@ -57,11 +54,55 @@ const Index = () => {
       }
       setFiles(filteredData);
     } catch (error) {
-      toast.error('Failed to load SOPs');
+      toast.error(error instanceof Error ? error.message : 'Failed to load SOPs');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleSearch = async (query: string) => {
+    if (!query || query.trim().length === 0) {
+      loadFiles();
+      return;
+    }
+
+    if (searchMode === 'content') {
+      setSearching(true);
+      try {
+        const brand = selectedBrand === 'home' ? undefined : selectedBrand;
+        const results = await sopApi.searchSOPsByContent(query, brand);
+        setFiles(results);
+        toast.success(`Found ${results.length} document${results.length !== 1 ? 's' : ''}`);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to search SOPs');
+        setFiles([]);
+      } finally {
+        setSearching(false);
+      }
+    } else {
+      // Filename search (existing behavior - reload and filter client-side)
+      loadFiles();
+    }
+  };
+
+  // Debounce content search and handle empty query
+  useEffect(() => {
+    if (searchMode === 'content') {
+      if (!searchQuery) {
+        loadFiles();
+      } else {
+        const timer = setTimeout(() => {
+          handleSearch(searchQuery);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [searchQuery]);
+
+  // Reload files when switching search modes to ensure consistent state
+  useEffect(() => {
+    loadFiles();
+  }, [searchMode]);
 
   const handleUpload = async (files: File[], brand: Brand, metadata: { fileCategory: string; uploadedBy: string }) => {
     setUploading(true);
@@ -69,7 +110,6 @@ const Index = () => {
     let failCount = 0;
 
     try {
-      // Process uploads sequentially or concurrently. Using Promise.allSettled for concurrency.
       const results = await Promise.allSettled(
         files.map(file => sopApi.uploadSOP(file, brand, metadata))
       );
@@ -88,7 +128,6 @@ const Index = () => {
         toast.success(`Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}`);
       }
       if (failCount > 0) {
-        // Show the first error message, or a summary if multiple
         const errorMsg = errors.length === 1 ? errors[0] : `Failed to upload ${failCount} files`;
         toast.error(errorMsg);
         if (errors.length > 1) {
@@ -99,7 +138,7 @@ const Index = () => {
       setUploadModalOpen(false);
       loadFiles();
     } catch (error) {
-      toast.error('An unexpected error occurred during upload');
+      toast.error(error instanceof Error ? error.message : 'An unexpected error occurred during upload');
     } finally {
       setUploading(false);
     }
@@ -111,7 +150,6 @@ const Index = () => {
   };
 
   const handleDownload = (file: SOPFile) => {
-    // Use the download endpoint which sets Content-Disposition: attachment
     const url = `${API_BASE_URL}/sops/download/${file.id}/${encodeURIComponent(file.fileName)}`;
     window.open(url, '_blank');
   };
@@ -127,7 +165,7 @@ const Index = () => {
       setSelectedFile(null);
       loadFiles();
     } catch (error) {
-      toast.error('Failed to update SOP');
+      toast.error(error instanceof Error ? error.message : 'Failed to update SOP');
     } finally {
       setUpdating(false);
     }
@@ -144,11 +182,15 @@ const Index = () => {
       setSelectedFile(null);
       loadFiles();
     } catch (error) {
-      toast.error('Failed to delete SOP');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete SOP');
     } finally {
       setDeleting(false);
     }
   };
+
+  const filteredFiles = searchMode === 'content'
+    ? files
+    : files.filter(file => file.fileName.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -178,15 +220,57 @@ const Index = () => {
               </div>
 
               <div className="flex items-center gap-3 flex-1 justify-end max-w-2xl">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search documents..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 h-10 bg-background border-border shadow-sm"
-                  />
+                <div className="flex items-center gap-2 flex-1 max-w-md">
+                  <div className="relative flex-1">
+                    {searching && searchMode === 'content' && (
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4">
+                        <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )}
+                    {!searching && (
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    )}
+                    <Input
+                      placeholder={searchMode === 'content' ? 'Search PDF content...' : 'Search documents...'}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 pr-9 h-10 bg-background border-border shadow-sm"
+                      disabled={searching}
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        title="Clear search"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <Button
+                    onClick={() => setSearchMode(searchMode === 'filename' ? 'content' : 'filename')}
+                    variant={searchMode === 'content' ? 'default' : 'outline'}
+                    size="icon"
+                    className="h-10 w-10 shrink-0"
+                    title={searchMode === 'content' ? 'Searching PDF content' : 'Click to search PDF content'}
+                  >
+                    <FileSearch className="h-4 w-4" />
+                  </Button>
                 </div>
+
+                {/* About Button */}
+                <Button
+                  onClick={() => setAboutDialogOpen(true)}
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                  title="About"
+                >
+                  <Info className="h-4 w-4" />
+                </Button>
+
+                <ThemeToggle />
+
                 <Button
                   onClick={() => setUploadModalOpen(true)}
                   className="gap-2 shrink-0 h-10 px-4 shadow-sm"
@@ -202,17 +286,29 @@ const Index = () => {
         {/* Content */}
         <div className="flex-1 bg-background">
           <div className="max-w-[95%] mx-auto px-8 py-8">
-            {/* Statistics Bar */}
-            <StatisticsBar files={files} />
+            {/* Brand Overview - Only on Home */}
+            {selectedBrand === 'home' && (
+              loading ? (
+                <BrandOverviewSkeleton />
+              ) : (
+                <BrandOverview
+                  files={files}
+                  onSelectBrand={(brand) => setSelectedBrand(brand)}
+                />
+              )
+            )}
 
-            {/* Table */}
+            {/* Statistics Bar */}
             {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
-              </div>
-            ) : files.filter(file =>
-              file.fileName.toLowerCase().includes(searchQuery.toLowerCase())
-            ).length === 0 ? (
+              <StatsSkeleton />
+            ) : (
+              <StatisticsBar files={files} />
+            )}
+
+            {/* Table/Grid */}
+            {loading ? (
+              <TableSkeleton />
+            ) : filteredFiles.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="w-20 h-20 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
                   <FileText className="h-10 w-10 text-muted-foreground" />
@@ -230,9 +326,7 @@ const Index = () => {
               </div>
             ) : (
               <SOPTable
-                files={files.filter(file =>
-                  file.fileName.toLowerCase().includes(searchQuery.toLowerCase())
-                )}
+                files={filteredFiles}
                 loading={loading}
                 showBrandColumn={selectedBrand === 'home'}
                 onPreview={handlePreview}
@@ -249,6 +343,22 @@ const Index = () => {
             )}
           </div>
         </div>
+
+        <footer className="mt-auto border-t border-border">
+          <div className="py-6">
+            <p className="text-sm text-muted-foreground flex items-center justify-center gap-3">
+              <span className="flex items-center gap-2">
+                <span className="h-px w-20 bg-gradient-to-r from-transparent via-border to-border"></span>
+                <span className="text-muted-foreground/60">✘</span>
+              </span>
+              © {new Date().getFullYear()} Apptech | Knitwell Group | Developed with <span className="text-red-500">💜</span> by <span className="font-semibold bg-gradient-to-r from-purple-600 via-pink-500 to-purple-400 bg-clip-text text-transparent">𝓢𝓪𝓷𝓽𝓱𝓾 . 𝓢𝓝</span>
+              <span className="flex items-center gap-2">
+                <span className="text-muted-foreground/60">✘</span>
+                <span className="h-px w-20 bg-gradient-to-l from-transparent via-border to-border"></span>
+              </span>
+            </p>
+          </div>
+        </footer>
       </main>
 
       {/* Modals */}
@@ -291,6 +401,13 @@ const Index = () => {
         onConfirm={handleDelete}
         deleting={deleting}
       />
+
+      <AboutDialog
+        open={aboutDialogOpen}
+        onClose={() => setAboutDialogOpen(false)}
+      />
+
+      <ScrollToTop />
     </div>
   );
 };

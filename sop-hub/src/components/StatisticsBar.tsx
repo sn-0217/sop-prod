@@ -10,13 +10,22 @@ export function StatisticsBar({ files }: StatisticsBarProps) {
   const totalFiles = files.length;
   const totalSize = files.reduce((acc, file) => acc + file.fileSize, 0);
 
-  // Get most recent upload date
+  // Get most recent activity date (upload or modification)
   const validDates = files
-    .map(f => parseDate(f.createdAt))
+    .map(f => {
+      const created = parseDate(f.createdAt);
+      const modified = parseDate(f.modifiedAt);
+
+      // Return the later of the two dates
+      if (created && modified) {
+        return created.getTime() > modified.getTime() ? created : modified;
+      }
+      return modified || created;
+    })
     .filter((d): d is Date => d !== null)
     .map(d => d.getTime());
 
-  const latestUpload = validDates.length > 0
+  const latestActivity = validDates.length > 0
     ? new Date(Math.max(...validDates))
     : null;
 
@@ -37,7 +46,7 @@ export function StatisticsBar({ files }: StatisticsBarProps) {
     },
     {
       label: 'Last Upload',
-      value: latestUpload ? formatDate(latestUpload.toISOString()) : 'No uploads',
+      value: latestActivity ? formatDate(latestActivity.toISOString()) : 'No uploads',
       icon: Clock,
       color: 'text-muted-foreground',
       bgColor: 'bg-muted',
@@ -52,8 +61,8 @@ export function StatisticsBar({ files }: StatisticsBarProps) {
           className="bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-md transition-all duration-200 group relative overflow-hidden"
         >
           <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 bg-gradient-to-br ${index === 0 ? 'from-primary to-transparent' :
-              index === 1 ? 'from-violet-500 to-transparent' :
-                'from-muted-foreground to-transparent'
+            index === 1 ? 'from-violet-500 to-transparent' :
+              'from-muted-foreground to-transparent'
             }`} />
 
           <div className="flex items-center gap-4 relative z-10">

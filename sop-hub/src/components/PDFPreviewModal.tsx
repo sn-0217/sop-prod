@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, X, Loader2 } from 'lucide-react';
 import { SOPFile } from '@/types/sop';
+import { API_BASE_URL } from '@/services/sopApi';
 
 interface PDFPreviewModalProps {
   open: boolean;
@@ -26,10 +27,12 @@ export function PDFPreviewModal({ open, onClose, file, onDownload }: PDFPreviewM
     setLoading(false);
   };
 
+
+
   // Use the actual file URL from the backend
   // Append filename to URL so browser displays it in title/tab
   const pdfUrl = file
-    ? `http://localhost:8080/api/sops/view/${file.id}/${encodeURIComponent(file.fileName)}`
+    ? `${API_BASE_URL}/sops/view/${file.id}/${encodeURIComponent(file.fileName)}`
     : '';
 
   // Create iframe URL with zoom parameter
@@ -53,7 +56,14 @@ export function PDFPreviewModal({ open, onClose, file, onDownload }: PDFPreviewM
       <DialogContent className="max-w-[95vw] h-[95vh] flex flex-col p-0">
         <DialogHeader className="px-6 py-4 border-b border-border">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg">{file?.fileName}</DialogTitle>
+            <div className="flex items-center gap-3">
+              <DialogTitle className="text-lg">{file?.fileName}</DialogTitle>
+              {file?.version && (
+                <span className="px-2 py-0.5 text-xs font-semibold bg-primary/10 text-primary rounded-md border border-primary/20">
+                  {file.version}
+                </span>
+              )}
+            </div>
           </div>
         </DialogHeader>
 

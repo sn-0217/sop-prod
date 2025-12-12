@@ -25,9 +25,9 @@ interface SOPTableProps {
   showBrandColumn?: boolean;
 }
 
-type SortKey = 'fileName' | 'fileCategory' | 'uploadedBy' | 'fileSize' | 'modifiedAt' | 'brand';
+type SortKey = 'fileName' | 'fileCategory' | 'uploadedBy' | 'fileSize' | 'modifiedAt' | 'brand' | 'version';
 type SortDirection = 'asc' | 'desc';
-type GroupBy = 'none' | 'brand' | 'fileCategory' | 'uploadedBy';
+type GroupBy = 'none' | 'brand' | 'fileCategory' | 'uploadedBy' | 'modifiedAt' | 'version';
 
 interface SortConfig {
   key: SortKey;
@@ -55,6 +55,25 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
       if (aValue === null || aValue === undefined) aValue = '';
       if (bValue === null || bValue === undefined) bValue = '';
 
+      // Special handling for version sorting
+      if (key === 'version') {
+        // Remove 'v' prefix and split by '.'
+        const parseVersion = (v: string) => {
+          if (!v) return [0, 0];
+          const clean = v.toLowerCase().replace('v', '');
+          const parts = clean.split('.').map(Number);
+          return parts.length === 2 ? parts : [Number(clean) || 0, 0];
+        };
+
+        const [aMajor, aMinor] = parseVersion(String(aValue));
+        const [bMajor, bMinor] = parseVersion(String(bValue));
+
+        if (aMajor !== bMajor) {
+          return direction === 'asc' ? aMajor - bMajor : bMajor - aMajor;
+        }
+        return direction === 'asc' ? aMinor - bMinor : bMinor - aMinor;
+      }
+
       // Case-insensitive string comparison
       if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase();
@@ -72,6 +91,28 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
 
     return sortedFiles.reduce((groups, file) => {
       let key = file[groupBy] as string;
+
+      if (groupBy === 'modifiedAt') {
+        // Group by date only, remove the time part
+        const fullDate = formatDate(file.modifiedAt);
+        // formatDate returns "Nov 27, 2025 13:06", we want "Nov 27, 2025"
+        // We can split by space and take the first 3 parts (Month Day, Year)
+        // But be careful if format changes. 
+        // Let's just use the date part if it matches the expected pattern.
+        // Or better, let's just take everything before the last space if it looks like a time.
+        // Actually, formatDate uses specific locale options.
+        // Let's just split by comma if it was "Date, Time", but it is "Date Time".
+        // The format is `${datePart} ${timePart}`.
+        // datePart is "Nov 27, 2025" (3 parts). timePart is "13:06" (1 part).
+        // So splitting by space gives 4 parts.
+        const parts = fullDate.split(' ');
+        if (parts.length >= 4) {
+          key = parts.slice(0, 3).join(' ');
+        } else {
+          key = fullDate;
+        }
+      }
+
       if (!key) key = 'Uncategorized';
       if (!groups[key]) {
         groups[key] = [];
@@ -123,6 +164,8 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
               <SelectItem value="brand">Brand</SelectItem>
               <SelectItem value="fileCategory">Category</SelectItem>
               <SelectItem value="uploadedBy">Uploaded By</SelectItem>
+              <SelectItem value="version">Version</SelectItem>
+              <SelectItem value="modifiedAt">Last Updated</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -152,6 +195,15 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                   </div>
                 </TableHead>
               )}
+              <TableHead
+                className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSort('version')}
+              >
+                <div className="flex items-center">
+                  Version
+                  <SortIcon columnKey="version" />
+                </div>
+              </TableHead>
               <TableHead
                 className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={() => handleSort('fileCategory')}
@@ -184,7 +236,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                 onClick={() => handleSort('modifiedAt')}
               >
                 <div className="flex items-center">
-                  Last Updated
+                  Modified Time
                   <SortIcon columnKey="modifiedAt" />
                 </div>
               </TableHead>
@@ -196,7 +248,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
               <Fragment key={groupName}>
                 {groupBy !== 'none' && (
                   <TableRow key={`group-${groupName}`} className="bg-muted/50 hover:bg-muted/50">
-                    <TableCell colSpan={showBrandColumn ? 7 : 6} className="font-semibold py-2">
+                    <TableCell colSpan={showBrandColumn ? 8 : 7} className="font-semibold py-2">
                       <div className="flex items-center gap-2">
                         <span className="capitalize">{groupName}</span>
                         <span className="text-xs font-normal text-muted-foreground bg-background px-2 py-0.5 rounded-full border border-border">
@@ -233,6 +285,15 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                         </Badge>
                       </TableCell>
                     )}
+                    <TableCell>
+                      {file.version ? (
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {file.version}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {file.fileCategory ? (
                         <Badge variant="secondary" className="font-normal">

@@ -19,7 +19,6 @@ public class SopEntry {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(unique = true)
     private String fileName;
     private String filePath;
     private long fileSize;
@@ -27,9 +26,15 @@ public class SopEntry {
     private String fileCategory;
     private String brand;
 
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String pdfContent;
+
     private String uploadedBy;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
+
+    private String version; // e.g., "v1", "v2", "v3"
 
     @PrePersist
     public void onCreate() {

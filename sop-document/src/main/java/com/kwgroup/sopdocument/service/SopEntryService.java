@@ -10,6 +10,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -45,6 +46,11 @@ public class SopEntryService {
 
     private final SopEntryRepository sopEntryRepository;
     private final SopMapper sopMapper;
+    private final PdfContentIndexService pdfContentIndexService;
+    private final EmailService emailService;
+
+    @Value("${sop.notification.admin-email}")
+    private String adminEmail;
 
     @Value("${sop.storage.path.knitwell}")
     private String knitwellBase;
@@ -82,6 +88,7 @@ public class SopEntryService {
      * @return SopEntryResponse of saved/updated entity
      */
     @Transactional
+    @CacheEvict(value = { "pdfSearchResults", "pdfContent" }, allEntries = true)
     public SopEntryResponse save(SopEntryRequest sopEntryRequest, MultipartFile file) {
         // 1. validate uploaded file
         if (file == null || file.isEmpty()) {
@@ -184,6 +191,8 @@ public class SopEntryService {
             existing.setBrand(brand);
             existing.setUploadedBy(uploadedBy);
             existing.setModifiedAt(LocalDateTime.now());
+            // Increment version
+            existing.setVersion(getNextVersion(existing.getVersion(), null));
             toSave = existing;
         } else {
             // create new entity from request using mapper
@@ -203,11 +212,24 @@ public class SopEntryService {
             entity.setBrand(brand);
             entity.setFileCategory(category);
             entity.setUploadedBy(uploadedBy);
+            // Set initial version for new SOP
+            entity.setVersion("v1.0");
 
             toSave = entity;
         }
 
         SopEntry saved = sopEntryRepository.save(toSave);
+
+        // Extract and index PDF content asynchronously
+        try {
+            pdfContentIndexService.indexSopEntry(saved);
+        } catch (Exception e) {
+            log.warn("Failed to index PDF content for entry: {}", saved.getId(), e);
+        }
+
+        // Send notification
+        sendNotification("SOP Uploaded: " + saved.getFileName(), "A new SOP has been uploaded.", saved);
+
         return sopMapper.toDto(saved);
     }
 
@@ -219,6 +241,7 @@ public class SopEntryService {
      * @return SopEntryResponse of updated entity
      */
     @Transactional
+    @CacheEvict(value = { "pdfSearchResults", "pdfContent" }, allEntries = true)
     public SopEntryResponse update(String id, SopEntryUpdateRequest sopEntryUpdateRequest) {
         SopEntry existing = sopEntryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("SOP entry not found with id: " + id));
@@ -328,7 +351,22 @@ public class SopEntryService {
         }
 
         existing.setModifiedAt(LocalDateTime.now());
+        // Increment version on update
+        existing.setVersion(getNextVersion(existing.getVersion(), sopEntryUpdateRequest.getVersionUpdateType()));
         SopEntry saved = sopEntryRepository.save(existing);
+
+        // Re-index PDF content if file was replaced
+        if (sopEntryUpdateRequest.getFile() != null && !sopEntryUpdateRequest.getFile().isEmpty()) {
+            try {
+                pdfContentIndexService.indexSopEntry(saved);
+            } catch (Exception e) {
+                log.warn("Failed to re-index PDF content for entry: {}", saved.getId(), e);
+            }
+        }
+
+        // Send notification
+        sendNotification("SOP Updated: " + saved.getFileName(), "An existing SOP has been updated.", saved);
+
         return sopMapper.toDto(saved);
     }
 
@@ -338,6 +376,7 @@ public class SopEntryService {
      * @param id the ID of the SOP entry to delete
      */
     @Transactional
+    @CacheEvict(value = { "pdfSearchResults", "pdfContent" }, allEntries = true)
     public void delete(String id) {
         SopEntry existing = sopEntryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("SOP entry not found with id: " + id));
@@ -356,6 +395,9 @@ public class SopEntryService {
 
         sopEntryRepository.delete(existing);
         log.info("Deleted SOP entry with id: {}", id);
+
+        // Send notification
+        sendNotification("SOP Deleted: " + existing.getFileName(), "An SOP has been deleted.", existing);
     }
 
     /* ---------- helper methods ---------- */
@@ -395,5 +437,73 @@ public class SopEntryService {
         String replaced = NON_WORD_PATTERN.matcher(baseName).replaceAll(" ").trim();
         replaced = replaced.replaceAll("\\s{2,}", " ");
         return replaced;
+    }
+
+    /**
+     * Get next version number by incrementing current version.
+     * Examples:
+     * - "v1" -> "v1.1" (default minor)
+     * - "v1.0" + MINOR -> "v1.1"
+     * - "v1.0" + MAJOR -> "v2.0"
+     * - "v1.5" + MAJOR -> "v2.0"
+     */
+    private static String getNextVersion(String currentVersion, String updateType) {
+        if (currentVersion == null || currentVersion.isEmpty()) {
+            return "v1.0";
+        }
+
+        // Default to MINOR if not specified
+        boolean isMajor = "MAJOR".equalsIgnoreCase(updateType);
+
+        try {
+            String cleanVersion = currentVersion.toLowerCase().replace("v", "");
+            int major = 1;
+            int minor = 0;
+
+            if (cleanVersion.contains(".")) {
+                String[] parts = cleanVersion.split("\\.");
+                major = Integer.parseInt(parts[0]);
+                minor = Integer.parseInt(parts[1]);
+            } else {
+                // Handle legacy "v1", "v2" etc.
+                major = Integer.parseInt(cleanVersion);
+                minor = 0;
+            }
+
+            if (isMajor) {
+                major++;
+                minor = 0;
+            } else {
+                if (minor == 9) {
+                    major++;
+                    minor = 0;
+                } else {
+                    minor++;
+                }
+            }
+
+            return "v" + major + "." + minor;
+        } catch (Exception e) {
+            log.warn("Failed to parse version '{}', defaulting to v1.0", currentVersion);
+            return "v1.0";
+        }
+    }
+
+    private void sendNotification(String title, String message, SopEntry sopEntry) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("title", title);
+        variables.put("message", message);
+
+        Map<String, String> details = new HashMap<>();
+        details.put("File Name", sopEntry.getFileName());
+        details.put("Brand", sopEntry.getBrand());
+        details.put("Category", sopEntry.getFileCategory());
+        details.put("Uploaded By", sopEntry.getUploadedBy());
+        details.put("Version", sopEntry.getVersion());
+        details.put("Time", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+
+        variables.put("details", details);
+
+        emailService.sendHtmlEmail(adminEmail, title, "email-template", variables);
     }
 }

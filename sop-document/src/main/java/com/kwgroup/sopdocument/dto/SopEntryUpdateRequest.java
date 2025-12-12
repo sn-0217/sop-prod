@@ -14,4 +14,6 @@ public class SopEntryUpdateRequest {
     private String uploadedBy;
 
     private org.springframework.web.multipart.MultipartFile file;
+
+    private String versionUpdateType; // "MAJOR" or "MINOR"
 }
