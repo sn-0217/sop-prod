@@ -36,9 +36,20 @@ public class SopEntry {
 
     private String version; // e.g., "v1", "v2", "v3"
 
+    // Approval workflow fields
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private ApprovalStatus status = ApprovalStatus.PENDING_APPROVAL;
+
+    private String assignedApproverId; // FK to Approver
+
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.status == null) {
+            this.status = ApprovalStatus.PENDING_APPROVAL;
+        }
     }
 
     @PreUpdate

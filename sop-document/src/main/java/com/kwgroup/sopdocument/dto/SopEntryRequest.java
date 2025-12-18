@@ -18,4 +18,7 @@ public class SopEntryRequest {
 
     @NotBlank(message = "UploadedBy cannot be empty")
     private String uploadedBy;
+
+    // Approval workflow - optional approver assignment
+    private String assignedApproverId;
 }

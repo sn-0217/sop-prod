@@ -25,12 +25,15 @@ export const sopApi = {
   },
 
   // POST /api/sops/upload
-  async uploadSOP(file: File, brand: Brand, metadata: { fileCategory: string; uploadedBy: string }): Promise<SOPFile> {
+  async uploadSOP(file: File, brand: Brand, metadata: { fileCategory: string; uploadedBy: string; assignedApproverId?: string }): Promise<SOPFile> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('brand', brand);
     formData.append('fileCategory', metadata.fileCategory);
     formData.append('uploadedBy', metadata.uploadedBy);
+    if (metadata.assignedApproverId) {
+      formData.append('assignedApproverId', metadata.assignedApproverId);
+    }
 
     const response = await fetch(`${API_BASE_URL}/sops/upload`, {
       method: 'POST',

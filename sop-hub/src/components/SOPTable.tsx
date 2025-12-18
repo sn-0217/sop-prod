@@ -23,6 +23,7 @@ interface SOPTableProps {
   onDelete: (file: SOPFile) => void;
   loading?: boolean;
   showBrandColumn?: boolean;
+  showStatusColumn?: boolean; // NEW: hide status on brand pages
 }
 
 type SortKey = 'fileName' | 'fileCategory' | 'uploadedBy' | 'fileSize' | 'modifiedAt' | 'brand' | 'version';
@@ -34,7 +35,7 @@ interface SortConfig {
   direction: SortDirection;
 }
 
-export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loading, showBrandColumn }: SOPTableProps) {
+export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loading, showBrandColumn, showStatusColumn = true }: SOPTableProps) {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'fileName', direction: 'asc' });
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
 
@@ -240,6 +241,9 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                   <SortIcon columnKey="modifiedAt" />
                 </div>
               </TableHead>
+              {showStatusColumn && (
+                <TableHead className="font-semibold text-foreground">Status</TableHead>
+              )}
               <TableHead className="text-right font-semibold text-foreground">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -310,6 +314,25 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                     <TableCell className="text-muted-foreground">
                       {formatDate(file.modifiedAt)}
                     </TableCell>
+                    {showStatusColumn && (
+                      <TableCell>
+                        {file.status === 'APPROVED' && (
+                          <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+                            Approved
+                          </Badge>
+                        )}
+                        {file.status === 'PENDING_APPROVAL' && (
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                            Pending
+                          </Badge>
+                        )}
+                        {file.status === 'REJECTED' && (
+                          <Badge variant="destructive">
+                            Rejected
+                          </Badge>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button

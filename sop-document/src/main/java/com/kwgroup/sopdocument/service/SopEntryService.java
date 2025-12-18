@@ -4,7 +4,7 @@ import com.kwgroup.sopdocument.dto.SopEntryRequest;
 import com.kwgroup.sopdocument.dto.SopEntryResponse;
 import com.kwgroup.sopdocument.dto.SopEntryUpdateRequest;
 import com.kwgroup.sopdocument.mapper.SopMapper;
-import com.kwgroup.sopdocument.model.SopEntry;
+import com.kwgroup.sopdocument.model.*;
 import com.kwgroup.sopdocument.repository.SopEntryRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +48,8 @@ public class SopEntryService {
     private final SopMapper sopMapper;
     private final PdfContentIndexService pdfContentIndexService;
     private final EmailService emailService;
+    private final ApproverService approverService;
+    private final ActionHistoryService actionHistoryService;
 
     @Value("${sop.notification.admin-email}")
     private String adminEmail;
@@ -215,10 +217,21 @@ public class SopEntryService {
             // Set initial version for new SOP
             entity.setVersion("v1.0");
 
+            // Set approval workflow fields for new SOP
+            entity.setStatus(ApprovalStatus.PENDING_APPROVAL);
+            entity.setAssignedApproverId(sopEntryRequest.getAssignedApproverId());
+
             toSave = entity;
         }
 
         SopEntry saved = sopEntryRepository.save(toSave);
+        log.info("Saved SOP: {} (brand: {}, category: {})", saved.getFileName(), saved.getBrand(),
+                saved.getFileCategory());
+
+        // Log to action history
+        ActionType actionType = existingOpt.isPresent() ? ActionType.UPDATED : ActionType.UPLOADED;
+        actionHistoryService.logAction(actionType, saved, sopEntryRequest.getUploadedBy(),
+                existingOpt.isPresent() ? "Updated to version: " + saved.getVersion() : null);
 
         // Extract and index PDF content asynchronously
         try {
@@ -227,8 +240,12 @@ public class SopEntryService {
             log.warn("Failed to index PDF content for entry: {}", saved.getId(), e);
         }
 
-        // Send notification
-        sendNotification("SOP Uploaded: " + saved.getFileName(), "A new SOP has been uploaded.", saved);
+        // Send approval request email to assigned approver
+        if (saved.getAssignedApproverId() != null) {
+            sendApprovalRequestEmail(saved);
+        } else {
+            log.warn("No approver assigned for SOP: {}. Skipping approval notification.", saved.getId());
+        }
 
         return sopMapper.toDto(saved);
     }
@@ -378,8 +395,27 @@ public class SopEntryService {
     @Transactional
     @CacheEvict(value = { "pdfSearchResults", "pdfContent" }, allEntries = true)
     public void delete(String id) {
+        delete(id, false);
+    }
+
+    /**
+     * Delete a SOP entry by ID with option to skip notification.
+     *
+     * @param id               the ID of the SOP entry to delete
+     * @param skipNotification if true, skip sending email notification (used when
+     *                         called from rejection flow)
+     */
+    @Transactional
+    @CacheEvict(value = { "pdfSearchResults", "pdfContent" }, allEntries = true)
+    public void delete(String id, boolean skipNotification) {
         SopEntry existing = sopEntryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("SOP entry not found with id: " + id));
+
+        // Save SOP details before deletion for action history
+        String sopId = existing.getId();
+        String fileName = existing.getFileName();
+        String brand = existing.getBrand();
+        String category = existing.getFileCategory();
 
         // Delete file from disk
         if (existing.getFilePath() != null) {
@@ -396,8 +432,14 @@ public class SopEntryService {
         sopEntryRepository.delete(existing);
         log.info("Deleted SOP entry with id: {}", id);
 
-        // Send notification
-        sendNotification("SOP Deleted: " + existing.getFileName(), "An SOP has been deleted.", existing);
+        // Log to action history (using saved details since entity is deleted)
+        actionHistoryService.logAction(ActionType.DELETED, sopId, fileName, brand, category, "admin", "SOP deleted");
+
+        // Send notification only if not skipped (to avoid duplicate emails from
+        // rejection flow)
+        if (!skipNotification) {
+            sendNotification("SOP Deleted: " + fileName, "An SOP has been deleted.", existing);
+        }
     }
 
     /* ---------- helper methods ---------- */
@@ -505,5 +547,43 @@ public class SopEntryService {
         variables.put("details", details);
 
         emailService.sendHtmlEmail(adminEmail, title, "email-template", variables);
+    }
+
+    private void sendApprovalRequestEmail(SopEntry sopEntry) {
+        try {
+            // Get approver details
+            Optional<Approver> approverOpt = approverService.getAllActiveApprovers().stream()
+                    .filter(a -> a.getId().equals(sopEntry.getAssignedApproverId()))
+                    .findFirst();
+
+            if (approverOpt.isEmpty()) {
+                log.error("Assigned approver not found: {}", sopEntry.getAssignedApproverId());
+                return;
+            }
+
+            Approver approver = approverOpt.get();
+
+            Map<String, Object> variables = new HashMap<>();
+            variables.put("sopTitle", sopEntry.getFileName());
+            variables.put("brand", sopEntry.getBrand());
+            variables.put("category", sopEntry.getFileCategory());
+            variables.put("uploadedBy", sopEntry.getUploadedBy());
+            variables.put("pendingAt", sopEntry.getCreatedAt()); // Use createdAt since pendingAt removed
+            variables.put("expiryDate", sopEntry.getCreatedAt().plusDays(7)); // Use createdAt
+            // TODO: Generate actual approval link with token
+            variables.put("approvalLink", "http://localhost:3000/approval/" + sopEntry.getId());
+
+            emailService.sendHtmlEmail(
+                    approver.getEmail(),
+                    "[Action Required] SOP Approval Request - " + sopEntry.getFileName(),
+                    "sop-approval-request",
+                    variables,
+                    adminEmail); // CC admin on approval requests
+
+            log.info("Sent approval request email to: {} (CC: {}) for SOP: {}", approver.getEmail(), adminEmail,
+                    sopEntry.getId());
+        } catch (Exception e) {
+            log.error("Failed to send approval request email for SOP: {}", sopEntry.getId(), e);
+        }
     }
 }

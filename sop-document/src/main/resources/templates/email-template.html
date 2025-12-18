@@ -4,239 +4,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>SOP Notification</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px 20px;
-            line-height: 1.6;
-        }
-
-        .email-wrapper {
-            max-width: 650px;
-            margin: 0 auto;
-        }
-
-        .container {
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px 30px;
-            text-align: center;
-            position: relative;
-        }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,138.7C960,139,1056,117,1152,101.3C1248,85,1344,75,1392,69.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
-            background-size: cover;
-            opacity: 0.5;
-        }
-
-        .header h1 {
-            color: #ffffff;
-            font-size: 28px;
-            font-weight: 700;
-            margin: 0;
-            position: relative;
-            z-index: 1;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .header p {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 14px;
-            margin-top: 8px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .content {
-            padding: 40px 30px;
-        }
-
-        .notification-title {
-            color: #1a202c;
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 16px;
-        }
-
-        .notification-message {
-            color: #4a5568;
-            font-size: 16px;
-            margin-bottom: 30px;
-            line-height: 1.8;
-        }
-
-        .info-box {
-            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 30px;
-            border: 1px solid #e2e8f0;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .info-box::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .info-title {
-            color: #2d3748;
-            font-size: 14px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 16px;
-        }
-
-        .info-item {
-            display: flex;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        }
-
-        .info-item:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .info-label {
-            font-weight: 600;
-            color: #4a5568;
-            min-width: 140px;
-            flex-shrink: 0;
-            font-size: 14px;
-        }
-
-        .info-value {
-            color: #2d3748;
-            font-size: 14px;
-            word-break: break-word;
-        }
-
-        .closing {
-            margin-top: 30px;
-            padding-top: 24px;
-            border-top: 2px solid #e2e8f0;
-        }
-
-        .closing p {
-            color: #4a5568;
-            font-size: 15px;
-            margin-bottom: 4px;
-        }
-
-        .team-signature {
-            color: #667eea;
-            font-weight: 600;
-        }
-
-        .footer {
-            background: #f7fafc;
-            padding: 24px 30px;
-            text-align: center;
-            border-top: 1px solid #e2e8f0;
-        }
-
-        .footer p {
-            color: #718096;
-            font-size: 13px;
-            margin: 4px 0;
-        }
-
-        .footer a {
-            color: #667eea;
-            text-decoration: none;
-        }
-
-        @media only screen and (max-width: 600px) {
-            body {
-                padding: 20px 10px;
-            }
-
-            .header,
-            .content,
-            .footer {
-                padding: 24px 20px;
-            }
-
-            .notification-title {
-                font-size: 20px;
-            }
-
-            .info-item {
-                flex-direction: column;
-                gap: 4px;
-            }
-
-            .info-label {
-                min-width: auto;
-            }
-        }
+    <!--[if mso]>
+    <style type="text/css">
+        table { border-collapse: collapse; }
+        .gradient-header { background: #667eea !important; }
     </style>
+    <![endif]-->
 </head>
 
-<body>
-    <div class="email-wrapper">
-        <div class="container">
-            <div class="header">
-                <h1>SOP Manager</h1>
-                <p>Document Management System</p>
-            </div>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="background-color: #f4f4f4;">
+        <tr>
+            <td style="padding: 20px 0;">
+                <!-- Main Container -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" align="center"
+                    style="margin: 0 auto; max-width: 600px;">
 
-            <div class="content">
-                <h2 class="notification-title" th:text="${title}">Notification Title</h2>
+                    <!-- Header with Gradient -->
+                    <tr>
+                        <td class="gradient-header"
+                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); background-color: #667eea; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                            <!--[if gte mso 9]>
+                            <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:90px;">
+                            <v:fill type="gradient" color="#667eea" color2="#764ba2" angle="135" />
+                            <v:textbox inset="0,0,0,0">
+                            <![endif]-->
+                            <h1 th:text="${title}"
+                                style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">SOP Manager
+                                Notification</h1>
+                            <!--[if gte mso 9]>
+                            </v:textbox>
+                            </v:rect>
+                            <![endif]-->
+                        </td>
+                    </tr>
 
-                <p class="notification-message" th:text="${message}">
-                    Notification message goes here.
-                </p>
+                    <!-- Content Area -->
+                    <tr>
+                        <td style="background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="color: #333333; font-size: 15px; line-height: 1.6;">
+                                        <p style="margin: 0 0 16px 0;">Hello,</p>
+                                        <p th:text="${message}" style="margin: 0 0 20px 0;">
+                                            Notification message goes here.
+                                        </p>
+                                    </td>
+                                </tr>
 
-                <div class="info-box" th:if="${details != null and !details.isEmpty()}">
-                    <div class="info-title">Details</div>
-                    <div class="info-item" th:each="detail : ${details}">
-                        <span class="info-label" th:text="${detail.key}">Label</span>
-                        <span class="info-value" th:text="${detail.value}">Value</span>
-                    </div>
-                </div>
+                                <!-- Info Box -->
+                                <tr th:if="${details != null and !details.isEmpty()}">
+                                    <td>
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                                            width="100%" style="background-color: #ffffff; margin: 20px 0;">
+                                            <tr>
+                                                <td style="width: 4px; background-color: #667eea;"></td>
+                                                <td style="padding: 20px;">
+                                                    <h3
+                                                        style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                        DETAILS</h3>
 
-                <div class="closing">
-                    <p>Best regards,</p>
-                    <p class="team-signature">𝓢𝓪𝓷𝓽𝓱𝓾.𝓢𝓝</p>
-                </div>
-            </div>
+                                                    <table role="presentation" cellspacing="0" cellpadding="0"
+                                                        border="0" width="100%">
+                                                        <tr th:each="detail, iterStat : ${details}">
+                                                            <td style="padding: 8px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.05);"
+                                                                th:style="${iterStat.last} ? 'padding: 8px 0; border-bottom: none;' : 'padding: 8px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.05);'">
+                                                                <table role="presentation" cellspacing="0"
+                                                                    cellpadding="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td
+                                                                            style="width: 120px; font-weight: 600; color: #4a5568; font-size: 14px; vertical-align: top;">
+                                                                            <span th:text="${detail.key}">Label</span>
+                                                                        </td>
+                                                                        <td style="color: #333333; font-size: 14px;">
+                                                                            <span th:text="${detail.value}">Value</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
 
-            <div class="footer">
-                <p>&copy; 2025 SOP Manager. All rights reserved.</p>
-                <p>Automated notification - Please do not reply to this email</p>
-            </div>
-        </div>
-    </div>
+                                <!-- Closing -->
+                                <tr>
+                                    <td style="padding-top: 20px;">
+                                        <p style="margin: 0; color: #333333; font-size: 15px;">Best regards,</p>
+                                        <p
+                                            style="margin: 5px 0 0 0; color: #667eea; font-weight: 600; font-size: 15px;">
+                                            𝓢𝓪𝓷𝓽𝓱𝓾.𝓢𝓝</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            style="padding: 20px; text-align: center; background-color: #ffffff; border-top: 1px solid #e0e0e0;">
+                            <p style="margin: 0 0 5px 0; color: #666666; font-size: 12px;">This is an automated message
+                                from the SOP Management System.</p>
+                            <p style="margin: 0; color: #666666; font-size: 12px;">© 2025 SOP Manager. All rights
+                                reserved.</p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 
 </html>

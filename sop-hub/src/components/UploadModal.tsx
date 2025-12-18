@@ -3,15 +3,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileDropzone, FileList as SelectedFileList } from './FileDropzone';
-import { Brand, BrandFilter } from '@/types/sop';
+import { Brand, BrandFilter, Approver } from '@/types/sop';
 import { cn } from '@/lib/utils';
+
+const API_BASE = 'http://localhost:8080/api';
 
 interface UploadModalProps {
   open: boolean;
   onClose: () => void;
   selectedBrand: BrandFilter;
-  onUpload: (files: File[], brand: Brand, metadata: { fileCategory: string; uploadedBy: string }) => void;
+  onUpload: (files: File[], brand: Brand, metadata: { fileCategory: string; uploadedBy: string; assignedApproverId?: string }) => void;
   uploading: boolean;
 }
 
@@ -26,6 +29,15 @@ export function UploadModal({ open, onClose, selectedBrand, onUpload, uploading 
   const [fileCategory, setFileCategory] = useState('');
   const [uploadedBy, setUploadedBy] = useState('');
   const [brand, setBrand] = useState<Brand>('knitwell');
+  const [approvers, setApprovers] = useState<Approver[]>([]);
+  const [selectedApproverId, setSelectedApproverId] = useState<string>('');
+
+  // Load approvers when modal opens
+  useEffect(() => {
+    if (open) {
+      fetchApprovers();
+    }
+  }, [open]);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -33,6 +45,7 @@ export function UploadModal({ open, onClose, selectedBrand, onUpload, uploading 
       setFiles([]);
       setFileCategory('');
       setUploadedBy('');
+      setSelectedApproverId('');
     } else {
       // Initialize brand based on selectedBrand prop
       if (selectedBrand !== 'home') {
@@ -44,9 +57,25 @@ export function UploadModal({ open, onClose, selectedBrand, onUpload, uploading 
     }
   }, [open, selectedBrand]);
 
+  const fetchApprovers = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/approvers`);
+      if (!response.ok) throw new Error('Failed to fetch approvers');
+      const data = await response.json();
+      setApprovers(data);
+      // Auto-select primary approver if available
+      const primaryApprover = data.find((a: Approver) => a.isPrimary);
+      if (primaryApprover) {
+        setSelectedApproverId(primaryApprover.id);
+      }
+    } catch (error) {
+      console.error('Error fetching approvers:', error);
+    }
+  };
+
   const handleUpload = () => {
     if (files.length > 0) {
-      onUpload(files, brand, { fileCategory, uploadedBy });
+      onUpload(files, brand, { fileCategory, uploadedBy, assignedApproverId: selectedApproverId });
     }
   };
 
@@ -122,6 +151,22 @@ export function UploadModal({ open, onClose, selectedBrand, onUpload, uploading 
                   className="h-10"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="approver" className="text-sm font-medium">Assign Approver</Label>
+                <Select value={selectedApproverId} onValueChange={setSelectedApproverId} disabled={uploading}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select an approver" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {approvers.map((approver) => (
+                      <SelectItem key={approver.id} value={approver.id}>
+                        {approver.name} {approver.isPrimary && '(Primary)'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </section>
 
@@ -173,7 +218,7 @@ export function UploadModal({ open, onClose, selectedBrand, onUpload, uploading 
           </Button>
           <Button
             onClick={handleUpload}
-            disabled={files.length === 0 || !fileCategory || !uploadedBy || !brand || uploading}
+            disabled={files.length === 0 || !fileCategory || !uploadedBy || !brand || !selectedApproverId || uploading}
             className="h-11 px-8 min-w-[120px]"
           >
             {uploading ? (

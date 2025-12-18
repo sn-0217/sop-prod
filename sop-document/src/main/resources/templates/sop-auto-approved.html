@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>SOP Auto-Approved</title>
+    <!--[if mso]>
+    <style type="text/css">
+        table { border-collapse: collapse; }
+        .gradient-header { background: #17a2b8 !important; }
+    </style>
+    <![endif]-->
+</head>
+
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="background-color: #f4f4f4;">
+        <tr>
+            <td style="padding: 20px 0;">
+                <!-- Main Container -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" align="center"
+                    style="margin: 0 auto; max-width: 600px;">
+
+                    <!-- Header with Gradient -->
+                    <tr>
+                        <td class="gradient-header"
+                            style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); background-color: #17a2b8; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                            <!--[if gte mso 9]>
+                            <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:90px;">
+                            <v:fill type="gradient" color="#17a2b8" color2="#138496" angle="135" />
+                            <v:textbox inset="0,0,0,0">
+                            <![endif]-->
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">🤖 SOP
+                                Auto-Approved</h1>
+                            <!--[if gte mso 9]>
+                            </v:textbox>
+                            </v:rect>
+                            <![endif]-->
+                        </td>
+                    </tr>
+
+                    <!-- Content Area -->
+                    <tr>
+                        <td style="background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="color: #333333; font-size: 15px; line-height: 1.6;">
+                                        <p style="margin: 0 0 20px 0;">Your SOP document has been automatically approved
+                                            after the 7-day review period.</p>
+                                    </td>
+                                </tr>
+
+                                <!-- Document Details Box -->
+                                <tr>
+                                    <td>
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                                            width="100%" style="background-color: #ffffff; margin: 20px 0;">
+                                            <tr>
+                                                <td style="width: 4px; background-color: #17a2b8;"></td>
+                                                <td style="padding: 20px;">
+                                                    <h3
+                                                        style="margin: 0 0 15px 0; color: #2d3748; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                        DOCUMENT DETAILS</h3>
+
+                                                    <table role="presentation" cellspacing="0" cellpadding="0"
+                                                        border="0" width="100%">
+                                                        <tr>
+                                                            <td
+                                                                style="padding: 8px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.05);">
+                                                                <table role="presentation" cellspacing="0"
+                                                                    cellpadding="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td
+                                                                            style="width: 140px; font-weight: 600; color: #4a5568; font-size: 14px; vertical-align: top;">
+                                                                            Title:</td>
+                                                                        <td style="color: #333333; font-size: 14px;">
+                                                                            <span th:text="${sopTitle}">Sample
+                                                                                SOP.pdf</span></td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td
+                                                                style="padding: 8px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.05);">
+                                                                <table role="presentation" cellspacing="0"
+                                                                    cellpadding="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td
+                                                                            style="width: 140px; font-weight: 600; color: #4a5568; font-size: 14px; vertical-align: top;">
+                                                                            Brand:</td>
+                                                                        <td style="color: #333333; font-size: 14px;">
+                                                                            <span th:text="${brand}">Knitwell</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td
+                                                                style="padding: 8px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.05);">
+                                                                <table role="presentation" cellspacing="0"
+                                                                    cellpadding="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td
+                                                                            style="width: 140px; font-weight: 600; color: #4a5568; font-size: 14px; vertical-align: top;">
+                                                                            Category:</td>
+                                                                        <td style="color: #333333; font-size: 14px;">
+                                                                            <span th:text="${category}">Quality</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td
+                                                                style="padding: 8px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.05);">
+                                                                <table role="presentation" cellspacing="0"
+                                                                    cellpadding="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td
+                                                                            style="width: 140px; font-weight: 600; color: #4a5568; font-size: 14px; vertical-align: top;">
+                                                                            Uploaded:</td>
+                                                                        <td style="color: #333333; font-size: 14px;">
+                                                                            <span
+                                                                                th:text="${#temporals.format(pendingAt, 'dd MMM yyyy HH:mm')}">03
+                                                                                Dec 2025 10:00</span></td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding: 8px 0;">
+                                                                <table role="presentation" cellspacing="0"
+                                                                    cellpadding="0" border="0" width="100%">
+                                                                    <tr>
+                                                                        <td
+                                                                            style="width: 140px; font-weight: 600; color: #4a5568; font-size: 14px; vertical-align: top;">
+                                                                            Auto-Approved:</td>
+                                                                        <td style="color: #333333; font-size: 14px;">
+                                                                            <span
+                                                                                th:text="${#temporals.format(autoApprovedAt, 'dd MMM yyyy HH:mm')}">10
+                                                                                Dec 2025 10:00</span></td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                                <!-- Info Box -->
+                                <tr>
+                                    <td>
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                                            width="100%" style="background-color: #d1ecf1; margin: 20px 0;">
+                                            <tr>
+                                                <td style="width: 4px; background-color: #17a2b8;"></td>
+                                                <td style="padding: 15px;">
+                                                    <p
+                                                        style="margin: 0 0 8px 0; font-weight: bold; color: #333333; font-size: 14px;">
+                                                        ℹ️ What does this mean?</p>
+                                                    <p style="margin: 0; color: #333333; font-size: 14px;">
+                                                        Your SOP was pending approval for 7 days without manual review.
+                                                        As per system policy, it has been automatically approved and is
+                                                        now visible in the system.
+                                                    </p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                                <!-- Final Message -->
+                                <tr>
+                                    <td style="padding-top: 10px;">
+                                        <p style="margin: 0; color: #333333; font-size: 15px;">
+                                            Your SOP is now accessible to all users in the <strong><span
+                                                    th:text="${brand}">Brand</span></strong> area.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            style="padding: 20px; text-align: center; background-color: #ffffff; border-top: 1px solid #e0e0e0;">
+                            <p style="margin: 0 0 5px 0; color: #666666; font-size: 12px;">This is an automated message
+                                from the SOP Management System.</p>
+                            <p style="margin: 0; color: #666666; font-size: 12px;">© 2025 Knitwell Group | Apptech</p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

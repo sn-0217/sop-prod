@@ -11,13 +11,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { sopApi } from '@/services/sopApi';
-import { Upload, FileText, Search, Italic, FileSearch, X, Info } from 'lucide-react';
+import { Upload, FileText, Search, Italic, FileSearch, X, Info, CheckSquare } from 'lucide-react';
 import { API_BASE_URL } from '@/services/sopApi';
 import { BrandOverview } from '@/components/BrandOverview';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ScrollToTop } from '@/components/ScrollToTop';
 import { TableSkeleton, StatsSkeleton, BrandOverviewSkeleton } from '@/components/SkeletonLoaders';
 import { AboutDialog } from '@/components/AboutDialog';
+import { PendingApprovals } from '@/components/PendingApprovals';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 const Index = () => {
   const [selectedBrand, setSelectedBrand] = useState<BrandFilter>('home');
@@ -104,7 +106,7 @@ const Index = () => {
     loadFiles();
   }, [searchMode]);
 
-  const handleUpload = async (files: File[], brand: Brand, metadata: { fileCategory: string; uploadedBy: string }) => {
+  const handleUpload = async (files: File[], brand: Brand, metadata: { fileCategory: string; uploadedBy: string; assignedApproverId?: string }) => {
     setUploading(true);
     let successCount = 0;
     let failCount = 0;
@@ -298,49 +300,70 @@ const Index = () => {
               )
             )}
 
-            {/* Statistics Bar */}
+            {/* Statistics Bar - Always visible */}
             {loading ? (
               <StatsSkeleton />
             ) : (
               <StatisticsBar files={files} />
             )}
 
-            {/* Table/Grid */}
-            {loading ? (
-              <TableSkeleton />
-            ) : filteredFiles.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-20 h-20 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
-                  <FileText className="h-10 w-10 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-1">No documents found</h3>
-                <p className="text-sm text-muted-foreground mb-6">
-                  {searchQuery ? 'Try adjusting your search terms' : 'Upload your first SOP document to get started'}
-                </p>
-                {!searchQuery && (
-                  <Button onClick={() => setUploadModalOpen(true)} className="gap-2">
-                    <Upload className="h-4 w-4" />
-                    Upload Document
-                  </Button>
+            {/* Tabs for SOPs and Pending Approvals */}
+            <Tabs defaultValue="sops" className="w-full mt-6">
+              <TabsList className="mb-6">
+                <TabsTrigger value="sops" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  All SOPs
+                </TabsTrigger>
+                <TabsTrigger value="pending" className="gap-2">
+                  <CheckSquare className="h-4 w-4" />
+                  Pending Approvals
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="sops" className="mt-0">
+                {/* Table/Grid */}
+                {loading ? (
+                  <TableSkeleton />
+                ) : filteredFiles.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-20 h-20 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
+                      <FileText className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-1">No documents found</h3>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      {searchQuery ? 'Try adjusting your search terms' : 'Upload your first SOP document to get started'}
+                    </p>
+                    {!searchQuery && (
+                      <Button onClick={() => setUploadModalOpen(true)} className="gap-2">
+                        <Upload className="h-4 w-4" />
+                        Upload Document
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <SOPTable
+                    files={filteredFiles}
+                    loading={loading}
+                    showBrandColumn={selectedBrand === 'home'}
+                    showStatusColumn={false}
+                    onPreview={handlePreview}
+                    onDownload={handleDownload}
+                    onUpdate={(file) => {
+                      setSelectedFile(file);
+                      setUpdateModalOpen(true);
+                    }}
+                    onDelete={(file) => {
+                      setSelectedFile(file);
+                      setDeleteDialogOpen(true);
+                    }}
+                  />
                 )}
-              </div>
-            ) : (
-              <SOPTable
-                files={filteredFiles}
-                loading={loading}
-                showBrandColumn={selectedBrand === 'home'}
-                onPreview={handlePreview}
-                onDownload={handleDownload}
-                onUpdate={(file) => {
-                  setSelectedFile(file);
-                  setUpdateModalOpen(true);
-                }}
-                onDelete={(file) => {
-                  setSelectedFile(file);
-                  setDeleteDialogOpen(true);
-                }}
-              />
-            )}
+              </TabsContent>
+
+              <TabsContent value="pending" className="mt-0">
+                <PendingApprovals onPreview={handlePreview} onApprovalSuccess={loadFiles} />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
 

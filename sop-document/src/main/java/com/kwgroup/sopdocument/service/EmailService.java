@@ -44,12 +44,21 @@ public class EmailService {
 
     @Async
     public void sendHtmlEmail(String to, String subject, String templateName, Map<String, Object> variables) {
+        sendHtmlEmail(to, subject, templateName, variables, null);
+    }
+
+    @Async
+    public void sendHtmlEmail(String to, String subject, String templateName, Map<String, Object> variables,
+            String cc) {
         if (!emailEnabled) {
             log.info("Email notifications are disabled. Skipping email to: {}", to);
             return;
         }
 
         log.info("Sending email to: {} using provider: {}", to, mailProvider);
+        if (cc != null && !cc.isBlank()) {
+            log.info("CC: {}", cc);
+        }
 
         try {
             // Validate provider configuration
@@ -79,6 +88,11 @@ public class EmailService {
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
+
+            // Add CC if provided
+            if (cc != null && !cc.isBlank()) {
+                helper.setCc(cc);
+            }
 
             if ("sendmail".equalsIgnoreCase(mailProvider)) {
                 sendWithSendmail(mimeMessage, to);

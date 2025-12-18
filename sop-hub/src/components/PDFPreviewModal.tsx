@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, X, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
 import { SOPFile } from '@/types/sop';
 import { API_BASE_URL } from '@/services/sopApi';
 
@@ -17,26 +17,24 @@ export function PDFPreviewModal({ open, onClose, file, onDownload }: PDFPreviewM
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(100);
 
+  const isPending = file?.status === 'PENDING_APPROVAL';
+
   const handleClose = () => {
     setCurrentPage(1);
     setZoom(100);
     setLoading(true);
     onClose();
   };
+
   const handleIframeLoad = () => {
     setLoading(false);
   };
 
-
-
   // Use the actual file URL from the backend
-  // Append filename to URL so browser displays it in title/tab
   const pdfUrl = file
     ? `${API_BASE_URL}/sops/view/${file.id}/${encodeURIComponent(file.fileName)}`
     : '';
 
-  // Create iframe URL with zoom parameter
-  // Note: #page and #zoom parameters work in Chrome/Edge default PDF viewer
   const iframeUrl = `${pdfUrl}#page=${currentPage}&zoom=${zoom}`;
 
   const handleNextPage = () => {
@@ -62,6 +60,11 @@ export function PDFPreviewModal({ open, onClose, file, onDownload }: PDFPreviewM
                 <span className="px-2 py-0.5 text-xs font-semibold bg-primary/10 text-primary rounded-md border border-primary/20">
                   {file.version}
                 </span>
+              )}
+              {isPending && (
+                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                  Pending Approval
+                </Badge>
               )}
             </div>
           </div>

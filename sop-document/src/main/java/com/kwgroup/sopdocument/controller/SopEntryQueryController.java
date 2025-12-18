@@ -2,6 +2,7 @@ package com.kwgroup.sopdocument.controller;
 
 import com.kwgroup.sopdocument.dto.SopEntryResponse;
 import com.kwgroup.sopdocument.mapper.SopMapper;
+import com.kwgroup.sopdocument.model.ApprovalStatus;
 import com.kwgroup.sopdocument.model.SopEntry;
 import com.kwgroup.sopdocument.repository.SopEntryRepository;
 import com.kwgroup.sopdocument.service.PdfSearchService;
@@ -31,11 +32,11 @@ public class SopEntryQueryController {
     private final PdfSearchService pdfSearchService;
 
     /**
-     * Return all SOP entries as JSON.
+     * Return all APPROVED SOP entries as JSON (hides pending/rejected SOPs).
      */
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<SopEntryResponse>> listAll() {
-        List<SopEntryResponse> all = sopEntryRepository.findAll().stream()
+        List<SopEntryResponse> all = sopEntryRepository.findByStatus(ApprovalStatus.APPROVED).stream()
                 .map(sopMapper::toDto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(all);

@@ -1,6 +1,7 @@
 package com.kwgroup.sopdocument.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.kwgroup.sopdocument.model.ApprovalStatus;
 import lombok.Builder;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -24,4 +25,8 @@ public class SopEntryResponse {
     private LocalDateTime modifiedAt;
 
     private String version;
+
+    // Approval workflow fields
+    private ApprovalStatus status;
+    private String assignedApproverId;
 }
