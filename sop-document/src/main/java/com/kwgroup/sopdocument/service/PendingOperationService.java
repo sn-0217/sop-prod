@@ -66,9 +66,6 @@ public class PendingOperationService {
 
         // Update operation status
         operation.setStatus(PendingOperationStatus.APPROVED);
-        operation.setReviewedBy(approverUsername);
-        operation.setReviewedAt(LocalDateTime.now());
-        operation.setComments(comments);
         pendingOperationRepository.save(operation);
 
         // Execute the operation based on type
@@ -111,9 +108,6 @@ public class PendingOperationService {
 
         // Update operation status
         operation.setStatus(PendingOperationStatus.REJECTED);
-        operation.setReviewedBy(approverUsername);
-        operation.setReviewedAt(LocalDateTime.now());
-        operation.setComments(comments);
         pendingOperationRepository.save(operation);
 
         // Log action history with SOP details from proposed data
@@ -151,9 +145,6 @@ public class PendingOperationService {
 
         // Update operation status
         operation.setStatus(PendingOperationStatus.APPROVED);
-        operation.setReviewedBy("SYSTEM");
-        operation.setReviewedAt(LocalDateTime.now());
-        operation.setComments("Auto-approved after " + operation.getRequestedAt());
         pendingOperationRepository.save(operation);
 
         // Execute the operation

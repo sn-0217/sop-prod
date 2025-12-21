@@ -104,18 +104,7 @@ public class PendingOperation {
     private LocalDateTime requestedAt;
 
     /**
-     * When the operation was reviewed (approved/rejected)
-     */
-    private LocalDateTime reviewedAt;
-
-    /**
-     * Username of the approver who reviewed this
-     */
-    @Column(length = 100)
-    private String reviewedBy;
-
-    /**
-     * Comments from approver (approval notes or rejection reason)
+     * Comments from requester (reason for upload/update/delete)
      */
     @Lob
     @Column(columnDefinition = "TEXT")
@@ -128,14 +117,6 @@ public class PendingOperation {
         }
         if (this.status == null) {
             this.status = PendingOperationStatus.PENDING;
-        }
-    }
-
-    @PreUpdate
-    public void onUpdate() {
-        // If status changed from PENDING to APPROVED/REJECTED, set reviewedAt
-        if (this.status != PendingOperationStatus.PENDING && this.reviewedAt == null) {
-            this.reviewedAt = LocalDateTime.now();
         }
     }
 }
