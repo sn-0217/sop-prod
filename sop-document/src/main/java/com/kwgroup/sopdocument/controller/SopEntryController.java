@@ -1,8 +1,8 @@
 package com.kwgroup.sopdocument.controller;
 
 import com.kwgroup.sopdocument.dto.SopEntryRequest;
-import com.kwgroup.sopdocument.dto.SopEntryResponse;
 import com.kwgroup.sopdocument.service.SopEntryService;
+import com.kwgroup.sopdocument.service.SopApprovalWorkflowService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/sops")
 @RequiredArgsConstructor
@@ -21,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class SopEntryController {
 
     private final SopEntryService sopEntryService;
+    private final SopApprovalWorkflowService approvalWorkflowService;
 
     /**
      * Accepts multipart/form-data with:
@@ -37,7 +40,7 @@ public class SopEntryController {
      * -F "uploadedBy=alice"
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<SopEntryResponse> uploadNewSop(
+    public ResponseEntity<?> uploadNewSop(
             @Valid @ModelAttribute SopEntryRequest req) {
         // manual validation for MultipartFile
         MultipartFile file = req.getFile();
@@ -45,23 +48,42 @@ public class SopEntryController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Uploaded file is missing or empty");
         }
 
-        // delegate to service which expects (SopEntryRequest, MultipartFile)
-        SopEntryResponse saved = sopEntryService.save(req, file);
+        // delegate to service which creates a pending operation
+        var pendingOperation = sopEntryService.saveWithApproval(req, file);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        // Return success message with operation ID
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "message", "Upload submitted for approval",
+                "operationId", pendingOperation.getId(),
+                "status", "PENDING_APPROVAL"));
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<SopEntryResponse> updateSop(
+    public ResponseEntity<?> updateSop(
             @PathVariable String id,
-            @Valid @ModelAttribute com.kwgroup.sopdocument.dto.SopEntryUpdateRequest req) {
-        SopEntryResponse updated = sopEntryService.update(id, req);
-        return ResponseEntity.ok(updated);
+            @Valid @ModelAttribute com.kwgroup.sopdocument.dto.SopEntryUpdateRequest req,
+            @RequestParam(required = false, defaultValue = "system") String requestedBy,
+            @RequestParam(required = false, defaultValue = "") String comments,
+            @RequestParam(required = false) String assignedApproverId) {
+        var pendingOperation = approvalWorkflowService.updateWithApproval(id, req, requestedBy, comments,
+                assignedApproverId);
+        return ResponseEntity.ok(Map.of(
+                "message", "Update submitted for approval",
+                "operationId", pendingOperation.getId(),
+                "status", "PENDING_APPROVAL"));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSop(@PathVariable String id) {
-        sopEntryService.delete(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deleteSop(
+            @PathVariable String id,
+            @RequestParam(required = false, defaultValue = "system") String requestedBy,
+            @RequestParam(required = false, defaultValue = "") String comments,
+            @RequestParam(required = false) String assignedApproverId) {
+        var pendingOperation = approvalWorkflowService.deleteWithApproval(id, requestedBy, comments,
+                assignedApproverId);
+        return ResponseEntity.ok(Map.of(
+                "message", "Delete submitted for approval",
+                "operationId", pendingOperation.getId(),
+                "status", "PENDING_APPROVAL"));
     }
 }

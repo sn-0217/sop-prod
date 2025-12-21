@@ -1,9 +1,9 @@
 package com.kwgroup.sopdocument.scheduler;
 
-import com.kwgroup.sopdocument.model.ApprovalStatus;
-import com.kwgroup.sopdocument.model.SopEntry;
-import com.kwgroup.sopdocument.repository.SopEntryRepository;
-import com.kwgroup.sopdocument.service.ApprovalService;
+import com.kwgroup.sopdocument.model.PendingOperation;
+import com.kwgroup.sopdocument.model.PendingOperationStatus;
+import com.kwgroup.sopdocument.repository.PendingOperationRepository;
+import com.kwgroup.sopdocument.service.PendingOperationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,14 +22,15 @@ import java.util.List;
 @Slf4j
 public class AutoApprovalScheduler {
 
-    private final SopEntryRepository sopEntryRepository;
-    private final ApprovalService approvalService;
+    private final PendingOperationRepository pendingOperationRepository;
+    private final PendingOperationService pendingOperationService;
 
     @Value("${sop.approval.auto-approve-days:7}")
     private int autoApproveDays;
 
     /**
-     * Runs every hour to check for SOPs pending approval for 7+ days.
+     * Runs every hour to check for pending operations awaiting approval for 7+
+     * days.
      * Cron: 0 0 * * * * = At the top of every hour
      */
     @Scheduled(cron = "0 0 * * * *")
@@ -37,27 +38,26 @@ public class AutoApprovalScheduler {
         log.info("Running auto-approval scheduler check...");
 
         LocalDateTime cutoff = LocalDateTime.now().minusDays(autoApproveDays);
-        // Use createdAt since pendingAt was removed
-        List<SopEntry> pendingSOPs = sopEntryRepository.findByStatusAndCreatedAtBefore(
-                ApprovalStatus.PENDING_APPROVAL,
+        List<PendingOperation> pendingOperations = pendingOperationRepository.findByStatusAndRequestedAtBefore(
+                PendingOperationStatus.PENDING,
                 cutoff);
 
-        if (pendingSOPs.isEmpty()) {
-            log.info("No SOPs eligible for auto-approval");
+        if (pendingOperations.isEmpty()) {
+            log.info("No pending operations eligible for auto-approval");
             return;
         }
 
-        log.info("Found {} SOP(s) eligible for auto-approval", pendingSOPs.size());
+        log.info("Found {} pending operation(s) eligible for auto-approval", pendingOperations.size());
 
-        for (SopEntry sop : pendingSOPs) {
+        for (PendingOperation operation : pendingOperations) {
             try {
-                approvalService.autoApproveSOP(sop);
-                log.info("Auto-approved SOP: {}", sop.getId());
+                pendingOperationService.autoApproveOperation(operation);
+                log.info("Auto-approved operation: {} (type: {})", operation.getId(), operation.getOperationType());
             } catch (Exception e) {
-                log.error("Failed to auto-approve SOP: {}", sop.getId(), e);
+                log.error("Failed to auto-approve operation: {}", operation.getId(), e);
             }
         }
 
-        log.info("Auto-approval scheduler completed. Processed {} SOP(s)", pendingSOPs.size());
+        log.info("Auto-approval scheduler completed. Processed {} operation(s)", pendingOperations.size());
     }
 }

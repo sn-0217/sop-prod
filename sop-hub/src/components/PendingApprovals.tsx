@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { SOPFile } from '@/types/sop';
+import { PendingOperation } from '@/types/sop';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileText, CheckCircle2, XCircle } from 'lucide-react';
+import { FileText, CheckCircle2, XCircle, Upload, Edit, Trash2, Loader2 } from 'lucide-react';
 import {
     Table,
     TableBody,
@@ -11,58 +11,161 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { formatDate, formatBytes } from '@/lib/formatters';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { formatDate } from '@/lib/formatters';
 import { ApprovalDialog } from './ApprovalDialog';
-
-const API_BASE = 'http://localhost:8080/api';
+import { approvalApi, API_BASE_URL } from '@/services/sopApi';
+import { toast } from 'sonner';
 
 interface PendingApprovalsProps {
-    onPreview: (file: SOPFile) => void;
     onApprovalSuccess: () => void;
 }
 
-export function PendingApprovals({ onPreview, onApprovalSuccess }: PendingApprovalsProps) {
-    const [pendingSOPs, setPendingSOPs] = useState<SOPFile[]>([]);
+export function PendingApprovals({ onApprovalSuccess }: PendingApprovalsProps) {
+    const [pendingOperations, setPendingOperations] = useState<PendingOperation[]>([]);
     const [loading, setLoading] = useState(true);
     const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
-    const [selectedSOP, setSelectedSOP] = useState<SOPFile | null>(null);
+    const [selectedOperation, setSelectedOperation] = useState<PendingOperation | null>(null);
     const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
 
+    // PDF Preview state
+    const [previewOpen, setPreviewOpen] = useState(false);
+    const [previewOperation, setPreviewOperation] = useState<PendingOperation | null>(null);
+    const [pdfLoading, setPdfLoading] = useState(true);
+
     useEffect(() => {
-        loadPendingSOPs();
+        loadPendingOperations();
     }, []);
 
-    const loadPendingSOPs = async () => {
+    const loadPendingOperations = async () => {
         try {
-            const response = await fetch(`${API_BASE}/sops/pending`);
-            if (!response.ok) throw new Error('Failed to load pending SOPs');
-            const data = await response.json();
-            setPendingSOPs(data);
+            const data = await approvalApi.getPendingOperations();
+            setPendingOperations(data);
         } catch (error) {
-            console.error('Error loading pending SOPs:', error);
+            console.error('Error loading pending operations:', error);
+            toast.error('Failed to load pending operations');
         } finally {
             setLoading(false);
         }
     };
 
-    const getDaysRemaining = (createdAt: string) => {
-        const createdDate = new Date(createdAt);
-        const expiryDate = new Date(createdDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const getDaysRemaining = (requestedAt: string) => {
+        const requestedDate = new Date(requestedAt);
+        const expiryDate = new Date(requestedDate.getTime() + 7 * 24 * 60 * 60 * 1000);
         const now = new Date();
         const daysRemaining = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
         return daysRemaining > 0 ? daysRemaining : 0;
     };
 
-    const handleApprovalClick = (sop: SOPFile, action: 'approve' | 'reject', e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent row click
-        setSelectedSOP(sop);
+    const handleApprovalClick = (operation: PendingOperation, action: 'approve' | 'reject', e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSelectedOperation(operation);
         setApprovalAction(action);
         setApprovalDialogOpen(true);
     };
 
     const handleApprovalSuccess = () => {
-        loadPendingSOPs();
+        loadPendingOperations();
         onApprovalSuccess();
+    };
+
+    const handlePreviewClick = (operation: PendingOperation, e: React.MouseEvent) => {
+        e.stopPropagation();
+        // Only allow preview for UPLOAD and DELETE operations (which have file paths)
+        if (operation.operationType === 'UPDATE') {
+            toast.info('Preview is not available for update operations');
+            return;
+        }
+        setPreviewOperation(operation);
+        setPdfLoading(true);
+        setPreviewOpen(true);
+    };
+
+    const getPreviewFileName = (operation: PendingOperation): string => {
+        const data = parseProposedData(operation.proposedData);
+        if (!data) return 'Document Preview';
+
+        if (operation.operationType === 'UPLOAD') {
+            return data.fileName || 'New document';
+        } else if (operation.operationType === 'DELETE') {
+            return data.snapshot?.fileName || 'Document';
+        }
+        return 'Document Preview';
+    };
+
+    const getOperationIcon = (type: string) => {
+        switch (type) {
+            case 'UPLOAD':
+                return <Upload className="h-4 w-4 text-blue-600" />;
+            case 'UPDATE':
+                return <Edit className="h-4 w-4 text-orange-600" />;
+            case 'DELETE':
+                return <Trash2 className="h-4 w-4 text-red-600" />;
+            default:
+                return <FileText className="h-4 w-4" />;
+        }
+    };
+
+    const getOperationBadgeColor = (type: string) => {
+        switch (type) {
+            case 'UPLOAD':
+                return 'bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800';
+            case 'UPDATE':
+                return 'bg-orange-50 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-800';
+            case 'DELETE':
+                return 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border-red-200 dark:border-red-800';
+            default:
+                return '';
+        }
+    };
+
+    const parseProposedData = (jsonString: string): any => {
+        try {
+            return JSON.parse(jsonString);
+        } catch {
+            return null;
+        }
+    };
+
+    const getOperationDetails = (operation: PendingOperation): string => {
+        const data = parseProposedData(operation.proposedData);
+        if (!data) return 'No details available';
+
+        switch (operation.operationType) {
+            case 'UPLOAD':
+                return data.fileName || 'New document';
+            case 'UPDATE':
+                const changes = data.changes || {};
+                const changeCount = Object.keys(changes).length;
+                return `${changeCount} field${changeCount !== 1 ? 's' : ''} modified`;
+            case 'DELETE':
+                return data.snapshot?.fileName || 'Document deletion';
+            default:
+                return 'Unknown operation';
+        }
+    };
+
+    // Get just the document name for the Document Name column
+    const getDocumentName = (operation: PendingOperation): string => {
+        const data = parseProposedData(operation.proposedData);
+        if (!data) return 'Unknown document';
+
+        switch (operation.operationType) {
+            case 'UPLOAD':
+                return data.fileName || 'New document';
+            case 'UPDATE':
+                // For updates, try to get the original filename from changes or just show the SOP ID
+                return data.originalFileName || `SOP Update`;
+            case 'DELETE':
+                return data.snapshot?.fileName || 'Document';
+            default:
+                return 'Unknown document';
+        }
+    };
+
+    // Check if preview is available for the operation
+    const canPreview = (operation: PendingOperation): boolean => {
+        return operation.operationType !== 'UPDATE';
     };
 
     if (loading) {
@@ -73,12 +176,12 @@ export function PendingApprovals({ onPreview, onApprovalSuccess }: PendingApprov
         );
     }
 
-    if (pendingSOPs.length === 0) {
+    if (pendingOperations.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mb-4 opacity-50" />
                 <p className="text-lg font-medium">No pending approvals</p>
-                <p className="text-sm">All SOPs have been reviewed</p>
+                <p className="text-sm">All operations have been reviewed</p>
             </div>
         );
     }
@@ -89,7 +192,7 @@ export function PendingApprovals({ onPreview, onApprovalSuccess }: PendingApprov
                 <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold">Pending Approvals</h2>
                     <Badge variant="secondary" className="text-lg px-3 py-1">
-                        {pendingSOPs.length} Pending
+                        {pendingOperations.length} Pending
                     </Badge>
                 </div>
 
@@ -97,57 +200,52 @@ export function PendingApprovals({ onPreview, onApprovalSuccess }: PendingApprov
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-muted/30 hover:bg-muted/30">
+                                <TableHead className="font-semibold text-foreground">Operation</TableHead>
                                 <TableHead className="font-semibold text-foreground">Document Name</TableHead>
-                                <TableHead className="font-semibold text-foreground">Brand</TableHead>
-                                <TableHead className="font-semibold text-foreground">Category</TableHead>
-                                <TableHead className="font-semibold text-foreground">Uploaded By</TableHead>
-                                <TableHead className="font-semibold text-foreground">Size</TableHead>
-                                <TableHead className="font-semibold text-foreground">Uploaded At</TableHead>
+                                <TableHead className="font-semibold text-foreground">Requested By</TableHead>
+                                <TableHead className="font-semibold text-foreground">Requested At</TableHead>
                                 <TableHead className="font-semibold text-foreground">Auto-Approval</TableHead>
                                 <TableHead className="font-semibold text-foreground text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {pendingSOPs.map((sop) => {
-                                const daysRemaining = getDaysRemaining(sop.createdAt!);
+                            {pendingOperations.map((operation) => {
+                                const daysRemaining = getDaysRemaining(operation.requestedAt);
                                 return (
                                     <TableRow
-                                        key={sop.id}
+                                        key={operation.id}
                                         className="hover:bg-muted/20 transition-colors"
                                     >
-                                        <TableCell className="font-medium">
-                                            <div
-                                                className="flex items-center gap-3 cursor-pointer"
-                                                onClick={() => onPreview(sop)}
-                                            >
-                                                <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
-                                                    <FileText className="h-4 w-4 text-yellow-600" />
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                                                    {getOperationIcon(operation.operationType)}
                                                 </div>
-                                                <span className="hover:underline">{sop.fileName}</span>
+                                                <Badge variant="outline" className={`font-normal ${getOperationBadgeColor(operation.operationType)}`}>
+                                                    {operation.operationType}
+                                                </Badge>
                                             </div>
                                         </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className="capitalize font-normal">
-                                                {sop.brand}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            {sop.fileCategory ? (
-                                                <Badge variant="secondary" className="font-normal">
-                                                    {sop.fileCategory}
-                                                </Badge>
+                                        <TableCell className="font-medium">
+                                            {canPreview(operation) ? (
+                                                <button
+                                                    onClick={(e) => handlePreviewClick(operation, e)}
+                                                    className="text-primary hover:text-primary/80 hover:underline cursor-pointer font-medium text-left"
+                                                    title="Click to preview document"
+                                                >
+                                                    {getDocumentName(operation)}
+                                                </button>
                                             ) : (
-                                                <span className="text-muted-foreground/50">—</span>
+                                                <span className="text-muted-foreground">
+                                                    {getDocumentName(operation)}
+                                                </span>
                                             )}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground">
-                                            {sop.uploadedBy || <span className="text-muted-foreground/50">—</span>}
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground font-medium">
-                                            {formatBytes(sop.fileSize)}
+                                            {operation.requestedBy || <span className="text-muted-foreground/50">—</span>}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground">
-                                            {formatDate(sop.createdAt!)}
+                                            {formatDate(operation.requestedAt)}
                                         </TableCell>
                                         <TableCell>
                                             {daysRemaining > 0 ? (
@@ -164,7 +262,7 @@ export function PendingApprovals({ onPreview, onApprovalSuccess }: PendingApprov
                                             <div className="flex items-center justify-end gap-2">
                                                 <Button
                                                     size="sm"
-                                                    onClick={(e) => handleApprovalClick(sop, 'approve', e)}
+                                                    onClick={(e) => handleApprovalClick(operation, 'approve', e)}
                                                     className="bg-green-600 hover:bg-green-700 text-white gap-1 h-8 px-3"
                                                 >
                                                     <CheckCircle2 className="h-3.5 w-3.5" />
@@ -173,7 +271,7 @@ export function PendingApprovals({ onPreview, onApprovalSuccess }: PendingApprov
                                                 <Button
                                                     size="sm"
                                                     variant="destructive"
-                                                    onClick={(e) => handleApprovalClick(sop, 'reject', e)}
+                                                    onClick={(e) => handleApprovalClick(operation, 'reject', e)}
                                                     className="gap-1 h-8 px-3"
                                                 >
                                                     <XCircle className="h-3.5 w-3.5" />
@@ -190,18 +288,61 @@ export function PendingApprovals({ onPreview, onApprovalSuccess }: PendingApprov
             </div>
 
             {/* Approval Authentication Dialog */}
-            {selectedSOP && (
+            {selectedOperation && (
                 <ApprovalDialog
                     open={approvalDialogOpen}
                     onClose={() => {
                         setApprovalDialogOpen(false);
-                        setSelectedSOP(null);
+                        setSelectedOperation(null);
                     }}
-                    sopId={selectedSOP.id}
+                    operationId={selectedOperation.id}
                     action={approvalAction}
                     onSuccess={handleApprovalSuccess}
                 />
             )}
+
+            {/* PDF Preview Dialog */}
+            <Dialog open={previewOpen} onOpenChange={() => {
+                setPreviewOpen(false);
+                setPreviewOperation(null);
+            }}>
+                <DialogContent className="max-w-[95vw] h-[95vh] flex flex-col p-0">
+                    <DialogHeader className="px-6 py-4 border-b border-border">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <DialogTitle className="text-lg">
+                                    {previewOperation ? getPreviewFileName(previewOperation) : 'Document Preview'}
+                                </DialogTitle>
+                                {previewOperation && (
+                                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                        Pending Approval
+                                    </Badge>
+                                )}
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    {/* PDF Viewer */}
+                    <div className="flex-1 overflow-hidden bg-muted/20 relative">
+                        {pdfLoading && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+                                <div className="flex flex-col items-center gap-3">
+                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                    <p className="text-sm text-muted-foreground">Loading PDF...</p>
+                                </div>
+                            </div>
+                        )}
+                        {previewOperation && (
+                            <iframe
+                                src={`${API_BASE_URL}/approvals/${previewOperation.id}/view/${encodeURIComponent(getPreviewFileName(previewOperation))}`}
+                                className="w-full h-full border-0"
+                                title={getPreviewFileName(previewOperation)}
+                                onLoad={() => setPdfLoading(false)}
+                            />
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

@@ -6,18 +6,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
-
-const API_BASE = 'http://localhost:8080/api';
+import { approvalApi } from '@/services/sopApi';
 
 interface ApprovalDialogProps {
     open: boolean;
     onClose: () => void;
-    sopId: string;
+    operationId: string;
     action: 'approve' | 'reject';
     onSuccess: () => void;
 }
 
-export function ApprovalDialog({ open, onClose, sopId, action, onSuccess }: ApprovalDialogProps) {
+export function ApprovalDialog({ open, onClose, operationId, action, onSuccess }: ApprovalDialogProps) {
     const [approverUsername, setApproverUsername] = useState('');
     const [approverPassword, setApproverPassword] = useState('');
     const [comments, setComments] = useState('');
@@ -37,30 +36,29 @@ export function ApprovalDialog({ open, onClose, sopId, action, onSuccess }: Appr
         setSubmitting(true);
 
         try {
-            const response = await fetch(`${API_BASE}/sops/${sopId}/${action}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    approverUsername,
-                    approverPassword,
+            if (action === 'approve') {
+                await approvalApi.approveOperation(operationId, {
+                    username: approverUsername,
+                    password: approverPassword,
                     comments: comments.trim() || undefined,
-                }),
-            });
-
-            if (!response.ok) {
-                const error = await response.text();
-                throw new Error(error || `Failed to ${action} SOP`);
+                });
+            } else {
+                await approvalApi.rejectOperation(operationId, {
+                    username: approverUsername,
+                    password: approverPassword,
+                    comments: comments.trim(),
+                });
             }
 
-            toast.success(`SOP ${action === 'approve' ? 'approved' : 'rejected'} successfully!`);
+            toast.success(`Operation ${action === 'approve' ? 'approved' : 'rejected'} successfully!`);
             setApproverUsername('');
             setApproverPassword('');
             setComments('');
             onClose();
             onSuccess();
         } catch (error: any) {
-            console.error(`Error ${action}ing SOP:`, error);
-            toast.error(error.message || `Failed to ${action} SOP`);
+            console.error(`Error ${action}ing operation:`, error);
+            toast.error(error.message || `Failed to ${action} operation`);
         } finally {
             setSubmitting(false);
         }
@@ -76,10 +74,10 @@ export function ApprovalDialog({ open, onClose, sopId, action, onSuccess }: Appr
                         ) : (
                             <XCircle className="h-5 w-5 text-destructive" />
                         )}
-                        {action === 'approve' ? 'Approve SOP' : 'Reject SOP'}
+                        {action === 'approve' ? 'Approve Operation' : 'Reject Operation'}
                     </DialogTitle>
                     <DialogDescription>
-                        Enter your credentials to {action === 'approve' ? 'approve' : 'reject'} this document
+                        Enter your credentials to {action === 'approve' ? 'approve' : 'reject'} this operation
                     </DialogDescription>
                 </DialogHeader>
 

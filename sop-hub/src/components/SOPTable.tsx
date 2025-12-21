@@ -24,6 +24,7 @@ interface SOPTableProps {
   loading?: boolean;
   showBrandColumn?: boolean;
   showStatusColumn?: boolean; // NEW: hide status on brand pages
+  pendingDeleteIds?: Set<string>; // IDs of SOPs with pending deletion requests
 }
 
 type SortKey = 'fileName' | 'fileCategory' | 'uploadedBy' | 'fileSize' | 'modifiedAt' | 'brand' | 'version';
@@ -35,7 +36,7 @@ interface SortConfig {
   direction: SortDirection;
 }
 
-export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loading, showBrandColumn, showStatusColumn = true }: SOPTableProps) {
+export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loading, showBrandColumn, showStatusColumn = true, pendingDeleteIds = new Set() }: SOPTableProps) {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'fileName', direction: 'asc' });
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
 
@@ -355,7 +356,9 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                           variant="ghost"
                           size="sm"
                           onClick={() => onDelete(file)}
-                          className="h-9 w-9 p-0 hover:bg-destructive/10 hover:text-destructive"
+                          disabled={pendingDeleteIds.has(file.id)}
+                          className="h-9 w-9 p-0 hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={pendingDeleteIds.has(file.id) ? 'Deletion pending approval' : 'Delete'}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -368,6 +371,6 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
           </TableBody>
         </Table>
       </div>
-    </div>
+    </div >
   );
 }

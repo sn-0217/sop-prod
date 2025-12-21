@@ -84,4 +84,23 @@ public class ApproverService {
     public String hashPassword(String rawPassword) {
         return passwordEncoder.encode(rawPassword);
     }
+
+    /**
+     * Get the next available approver for auto-assignment.
+     * Uses round-robin selection among active approvers.
+     * 
+     * @return Optional of Approver if any active approvers exist, empty otherwise
+     */
+    public Optional<Approver> getNextAvailableApprover() {
+        List<Approver> activeApprovers = getAllActiveApprovers();
+        if (activeApprovers.isEmpty()) {
+            log.warn("No active approvers available for auto-assignment");
+            return Optional.empty();
+        }
+        // Simple selection: return the first active approver
+        // In future, could implement actual round-robin or load balancing
+        Approver approver = activeApprovers.get(0);
+        log.info("Auto-assigned approver: {} ({})", approver.getName(), approver.getId());
+        return Optional.of(approver);
+    }
 }

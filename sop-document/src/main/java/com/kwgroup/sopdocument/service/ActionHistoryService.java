@@ -69,4 +69,55 @@ public class ActionHistoryService {
             log.error("Failed to log action: {}", actionType, e);
         }
     }
+
+    /**
+     * Log an action with pending operation link.
+     * 
+     * @param actionType         Type of action
+     * @param sopId              SOP ID (can be null for uploads not yet created)
+     * @param pendingOperationId ID of the pending operation this action relates to
+     * @param actorName          Who performed the action
+     * @param comments           Optional comments
+     */
+    @Async
+    public void logActionWithOperation(ActionType actionType, String sopId, String pendingOperationId,
+            String actorName, String comments) {
+        logActionWithOperation(actionType, sopId, pendingOperationId, null, null, null, actorName, comments);
+    }
+
+    /**
+     * Log an action with pending operation link and SOP details.
+     * Use this overload when SOP details are available (e.g., from proposedData for
+     * uploads).
+     * 
+     * @param actionType         Type of action
+     * @param sopId              SOP ID (can be null for uploads not yet created)
+     * @param pendingOperationId ID of the pending operation this action relates to
+     * @param fileName           SOP file name
+     * @param brand              SOP brand
+     * @param category           SOP category
+     * @param actorName          Who performed the action
+     * @param comments           Optional comments
+     */
+    @Async
+    public void logActionWithOperation(ActionType actionType, String sopId, String pendingOperationId,
+            String fileName, String brand, String category, String actorName, String comments) {
+        try {
+            ActionHistory history = ActionHistory.builder()
+                    .actionType(actionType)
+                    .sopId(sopId)
+                    .sopFileName(fileName)
+                    .sopBrand(brand)
+                    .sopCategory(category)
+                    .pendingOperationId(pendingOperationId)
+                    .actorName(actorName)
+                    .comments(comments)
+                    .build();
+
+            actionHistoryRepository.save(history);
+            log.debug("Logged action: {} for operation: {} by: {}", actionType, pendingOperationId, actorName);
+        } catch (Exception e) {
+            log.error("Failed to log action: {}", actionType, e);
+        }
+    }
 }

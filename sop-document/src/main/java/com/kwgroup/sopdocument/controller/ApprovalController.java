@@ -1,89 +1,182 @@
 package com.kwgroup.sopdocument.controller;
 
-import com.kwgroup.sopdocument.dto.ApprovalRequest;
-import com.kwgroup.sopdocument.dto.ApproverResponse;
-import com.kwgroup.sopdocument.model.SopEntry;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kwgroup.sopdocument.model.PendingOperation;
+import com.kwgroup.sopdocument.model.PendingOperationType;
 import com.kwgroup.sopdocument.service.ApprovalService;
-import com.kwgroup.sopdocument.service.ApproverService;
-import jakarta.validation.Valid;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/approvals")
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "*")
 public class ApprovalController {
 
     private final ApprovalService approvalService;
-    private final ApproverService approverService;
+    private final ObjectMapper objectMapper;
 
     /**
-     * Get all active approvers for selection in upload form.
+     * Get all pending operations awaiting approval.
      */
-    @GetMapping("/approvers")
-    public ResponseEntity<List<ApproverResponse>> getApprovers() {
-        log.info("Fetching all active approvers");
-        List<ApproverResponse> approvers = approverService.getAllActiveApprovers()
-                .stream()
-                .map(ApproverResponse::from)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(approvers);
+    @GetMapping("/pending")
+    public ResponseEntity<List<PendingOperation>> getPendingOperations() {
+        List<PendingOperation> pending = approvalService.getPendingOperations();
+        return ResponseEntity.ok(pending);
     }
 
     /**
-     * Get all SOPs pending approval.
+     * Get a specific pending operation.
      */
-    @GetMapping("/sops/pending")
-    public ResponseEntity<List<SopEntry>> getPendingSOPs() {
-        log.info("Fetching all pending SOPs");
-        List<SopEntry> pendingSOPs = approvalService.getPendingSOPs();
-        return ResponseEntity.ok(pendingSOPs);
+    @GetMapping("/{operationId}")
+    public ResponseEntity<PendingOperation> getPendingOperation(@PathVariable String operationId) {
+        PendingOperation operation = approvalService.getPendingOperation(operationId);
+        return ResponseEntity.ok(operation);
     }
 
     /**
-     * Approve a SOP (requires approver authentication).
+     * View PDF file for a pending operation inline (for preview).
+     * Works for UPLOAD operations (serves the pending file) and UPDATE/DELETE
+     * (serves the existing SOP file).
      */
-    @PostMapping("/sops/{id}/approve")
-    public ResponseEntity<String> approveSOP(
-            @PathVariable String id,
-            @Valid @RequestBody ApprovalRequest request) {
-
-        log.info("Approval request for SOP: {} by user: {}", id, request.getApproverUsername());
-
+    @GetMapping(value = { "/{operationId}/view", "/{operationId}/view/{filename}" })
+    public ResponseEntity<Object> viewPendingOperationFile(@PathVariable String operationId) {
         try {
-            approvalService.approveSOP(id, request.getApproverUsername(),
-                    request.getApproverPassword(), request.getComments());
-            return ResponseEntity.ok("SOP approved successfully");
+            PendingOperation operation = approvalService.getPendingOperation(operationId);
+            if (operation == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Pending operation not found");
+            }
+
+            JsonNode proposedData = objectMapper.readTree(operation.getProposedData());
+            String filePath = null;
+            String fileName = null;
+
+            if (operation.getOperationType() == PendingOperationType.UPLOAD) {
+                // For uploads, the file path is directly in proposedData
+                filePath = proposedData.has("filePath") ? proposedData.get("filePath").asText() : null;
+                fileName = proposedData.has("fileName") ? proposedData.get("fileName").asText() : null;
+            } else if (operation.getOperationType() == PendingOperationType.DELETE) {
+                // For deletes, get from snapshot
+                JsonNode snapshot = proposedData.get("snapshot");
+                if (snapshot != null) {
+                    filePath = snapshot.has("filePath") ? snapshot.get("filePath").asText() : null;
+                    fileName = snapshot.has("fileName") ? snapshot.get("fileName").asText() : null;
+                }
+            }
+
+            if (filePath == null || filePath.isBlank()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No file path found in pending operation");
+            }
+
+            return servePdfResource(filePath, fileName);
+
         } catch (Exception e) {
-            log.error("Error approving SOP: {}", id, e);
-            throw e;
+            log.error("Error viewing pending operation file: {}", operationId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error viewing file: " + e.getMessage());
         }
     }
 
-    /**
-     * Reject a SOP (requires approver authentication and comments).
-     */
-    @PostMapping("/sops/{id}/reject")
-    public ResponseEntity<String> rejectSOP(
-            @PathVariable String id,
-            @Valid @RequestBody ApprovalRequest request) {
-
-        log.info("Rejection request for SOP: {} by user: {}", id, request.getApproverUsername());
-
+    private ResponseEntity<Object> servePdfResource(String filePath, String suggestedFileName) {
         try {
-            approvalService.rejectSOP(id, request.getApproverUsername(),
-                    request.getApproverPassword(), request.getComments());
-            return ResponseEntity.ok("SOP rejected successfully");
-        } catch (Exception e) {
-            log.error("Error rejecting SOP: {}", id, e);
-            throw e;
+            Path path = Paths.get(filePath).normalize();
+            Path absolutePath = path.toAbsolutePath();
+
+            if (!Files.exists(path)) {
+                log.warn("File does not exist: {}", absolutePath);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("File not found at path: " + absolutePath);
+            }
+            if (!Files.isReadable(path) || Files.isDirectory(path)) {
+                log.warn("File is not readable or is directory: {}", absolutePath);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("File is not readable or is directory");
+            }
+
+            Resource resource = new FileSystemResource(path.toFile());
+            long contentLength = Files.size(path);
+
+            // Build filename for header
+            if (suggestedFileName == null || suggestedFileName.isBlank()) {
+                suggestedFileName = path.getFileName().toString();
+            } else {
+                // Append extension from actual file
+                String ext = getExtension(path.getFileName().toString());
+                suggestedFileName = suggestedFileName.replaceAll("\\s+", " ");
+                if (!suggestedFileName.toLowerCase().endsWith(ext.toLowerCase())) {
+                    suggestedFileName = suggestedFileName + ext;
+                }
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.set(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + suggestedFileName + "\"");
+            headers.setContentLength(contentLength);
+
+            return new ResponseEntity<>(resource, headers, HttpStatus.OK);
+        } catch (IOException e) {
+            log.error("Error while serving file: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error serving file: " + e.getMessage());
         }
+    }
+
+    private static String getExtension(String filename) {
+        if (filename == null)
+            return "";
+        int dot = filename.lastIndexOf('.');
+        return (dot >= 0) ? filename.substring(dot) : "";
+    }
+
+    /**
+     * Approve a pending operation.
+     */
+    @PostMapping("/{operationId}/approve")
+    public ResponseEntity<Void> approveOperation(
+            @PathVariable String operationId,
+            @RequestBody ApprovalRequest request) {
+
+        approvalService.approveOperation(
+                operationId,
+                request.getUsername(),
+                request.getPassword(),
+                request.getComments());
+
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Reject a pending operation.
+     */
+    @PostMapping("/{operationId}/reject")
+    public ResponseEntity<Void> rejectOperation(
+            @PathVariable String operationId,
+            @RequestBody ApprovalRequest request) {
+
+        approvalService.rejectOperation(
+                operationId,
+                request.getUsername(),
+                request.getPassword(),
+                request.getComments());
+
+        return ResponseEntity.ok().build();
+    }
+
+    @Data
+    public static class ApprovalRequest {
+        private String username;
+        private String password;
+        private String comments;
     }
 }

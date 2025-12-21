@@ -36,20 +36,17 @@ public class SopEntry {
 
     private String version; // e.g., "v1", "v2", "v3"
 
-    // Approval workflow fields
-    @Enumerated(EnumType.STRING)
+    /**
+     * Soft delete flag. When true, document is active.
+     * When false, document has been deleted but kept for audit trail.
+     */
     @Column(nullable = false)
     @Builder.Default
-    private ApprovalStatus status = ApprovalStatus.PENDING_APPROVAL;
-
-    private String assignedApproverId; // FK to Approver
+    private boolean isActive = true;
 
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
-        if (this.status == null) {
-            this.status = ApprovalStatus.PENDING_APPROVAL;
-        }
     }
 
     @PreUpdate

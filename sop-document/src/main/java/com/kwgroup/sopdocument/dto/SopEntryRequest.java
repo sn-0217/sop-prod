@@ -21,4 +21,12 @@ public class SopEntryRequest {
 
     // Approval workflow - optional approver assignment
     private String assignedApproverId;
+
+    // Version - optional, defaults to v1.0 if not provided
+    @Pattern(regexp = "^v\\d+\\.\\d+$", message = "Version must be in format v1.0, v2.0, etc.")
+    private String version;
+
+    // Comments - required for explaining the reason for upload
+    @NotBlank(message = "Comments cannot be empty")
+    private String comments;
 }

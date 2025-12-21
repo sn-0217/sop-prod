@@ -30,9 +30,7 @@ public class SopMapper {
                 .createdAt(entry.getCreatedAt())
                 .modifiedAt(entry.getModifiedAt())
                 .version(entry.getVersion())
-                // Approval workflow fields
-                .status(entry.getStatus())
-                .assignedApproverId(entry.getAssignedApproverId())
+                .isActive(entry.isActive())
                 .build();
     }
 }

@@ -50,6 +50,7 @@ public class SopEntryService {
     private final EmailService emailService;
     private final ApproverService approverService;
     private final ActionHistoryService actionHistoryService;
+    private final PendingOperationService pendingOperationService;
 
     @Value("${sop.notification.admin-email}")
     private String adminEmail;
@@ -80,6 +81,118 @@ public class SopEntryService {
 
     private static final DateTimeFormatter BACKUP_TS_FORMAT = DateTimeFormatter.ofPattern("dd-MM-yyyy_HH-mm-ss");
     private static final Pattern NON_WORD_PATTERN = Pattern.compile("[^A-Za-z0-9]+");
+
+    /**
+     * Save a SOP entry with approval workflow - creates a pending operation instead
+     * of directly saving
+     *
+     * @param sopEntryRequest metadata provided by client
+     * @param file            multipart uploaded file
+     * @return PendingOperation entity (not yet a SOP entry)
+     */
+    @Transactional
+    @CacheEvict(value = { "pdfSearchResults", "pdfContent" }, allEntries = true)
+    public PendingOperation saveWithApproval(SopEntryRequest sopEntryRequest, MultipartFile file) {
+        // 1. validate uploaded file
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Uploaded file is missing or empty");
+        }
+
+        String originalFilename = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
+        if (originalFilename.isBlank()) {
+            throw new IllegalArgumentException("Uploaded file must have a valid filename");
+        }
+        log.info("Uploading file for approval: {}", originalFilename);
+
+        // 2. derive DB-friendly fileName
+        String dbFileName = beautifyFileNameForDb(originalFilename);
+
+        // 3. basic validations
+        String category = sopEntryRequest.getFileCategory();
+        String brand = sopEntryRequest.getBrand();
+        String uploadedBy = sopEntryRequest.getUploadedBy();
+        String version = nonNullOrDefault(sopEntryRequest.getVersion(), "v1.0");
+        String assignedApproverId = sopEntryRequest.getAssignedApproverId();
+
+        // Auto-assign approver if not explicitly specified
+        if (assignedApproverId == null || assignedApproverId.isBlank()) {
+            assignedApproverId = approverService.getNextAvailableApprover()
+                    .map(approver -> approver.getId())
+                    .orElse(null);
+            log.info("Auto-assigned approver ID: {}", assignedApproverId);
+        }
+
+        if (category == null || category.isBlank()) {
+            throw new IllegalArgumentException("File category is required");
+        }
+        if (brand == null || brand.isBlank()) {
+            throw new IllegalArgumentException("Brand is required");
+        }
+        if (uploadedBy == null || uploadedBy.isBlank()) {
+            throw new IllegalArgumentException("UploadedBy is required");
+        }
+
+        // 4. get brand base path
+        String basePath = brandToBaseMap.get(brand.toLowerCase(Locale.ROOT));
+        if (basePath == null) {
+            throw new IllegalArgumentException("No base path configured for brand: " + brand);
+        }
+
+        // 5. prepare disk file name
+        String extension = getExtensionWithDot(originalFilename);
+        String diskBaseName = beautifyForDisk(dbFileName);
+        String diskFileName = diskBaseName + extension;
+
+        // 6. ensure base directory exists
+        Path baseDir = Paths.get(basePath).normalize();
+        try {
+            Files.createDirectories(baseDir);
+        } catch (IOException e) {
+            log.error("Failed to create base directory: {}", baseDir, e);
+            throw new RuntimeException("Unable to create base directory: " + baseDir, e);
+        }
+
+        Path targetPath = baseDir.resolve(diskFileName).normalize();
+
+        // 7. handle backup if file exists
+        if (Files.exists(targetPath)) {
+            String backupName = diskBaseName + "_" + LocalDateTime.now().format(BACKUP_TS_FORMAT) + extension;
+            Path backupDir = baseDir.resolve("backups");
+            try {
+                Files.createDirectories(backupDir);
+                Path backupPath = backupDir.resolve(backupName);
+                Files.move(targetPath, backupPath, StandardCopyOption.REPLACE_EXISTING);
+                log.info("Moved existing file to backup: {}", backupPath);
+            } catch (IOException e) {
+                log.error("Failed to backup existing file", e);
+            }
+        }
+
+        // 8. write uploaded file to disk
+        long size = file.getSize();
+        try {
+            Files.write(targetPath, file.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            log.info("Saved uploaded file to {}", targetPath);
+        } catch (IOException e) {
+            log.error("Failed to write uploaded file to disk: {}", targetPath, e);
+            throw new RuntimeException("Failed to write uploaded file to disk", e);
+        }
+
+        // 9. Create pending operation instead of saving SOP directly
+        PendingOperation pendingOperation = pendingOperationService.createUploadOperation(
+                dbFileName,
+                targetPath.toString(),
+                size,
+                category,
+                brand,
+                uploadedBy,
+                version,
+                assignedApproverId,
+                sopEntryRequest.getComments());
+
+        log.info("Created pending upload operation: {}", pendingOperation.getId());
+        return pendingOperation;
+    }
 
     /**
      * Save (create or update) a SOP entry with file upload.
@@ -214,12 +327,8 @@ public class SopEntryService {
             entity.setBrand(brand);
             entity.setFileCategory(category);
             entity.setUploadedBy(uploadedBy);
-            // Set initial version for new SOP
-            entity.setVersion("v1.0");
-
-            // Set approval workflow fields for new SOP
-            entity.setStatus(ApprovalStatus.PENDING_APPROVAL);
-            entity.setAssignedApproverId(sopEntryRequest.getAssignedApproverId());
+            // Set initial version for new SOP - use provided version or default to v1.0
+            entity.setVersion(nonNullOrDefault(sopEntryRequest.getVersion(), "v1.0"));
 
             toSave = entity;
         }
@@ -238,13 +347,6 @@ public class SopEntryService {
             pdfContentIndexService.indexSopEntry(saved);
         } catch (Exception e) {
             log.warn("Failed to index PDF content for entry: {}", saved.getId(), e);
-        }
-
-        // Send approval request email to assigned approver
-        if (saved.getAssignedApproverId() != null) {
-            sendApprovalRequestEmail(saved);
-        } else {
-            log.warn("No approver assigned for SOP: {}. Skipping approval notification.", saved.getId());
         }
 
         return sopMapper.toDto(saved);
@@ -549,41 +651,51 @@ public class SopEntryService {
         emailService.sendHtmlEmail(adminEmail, title, "email-template", variables);
     }
 
-    private void sendApprovalRequestEmail(SopEntry sopEntry) {
-        try {
-            // Get approver details
-            Optional<Approver> approverOpt = approverService.getAllActiveApprovers().stream()
-                    .filter(a -> a.getId().equals(sopEntry.getAssignedApproverId()))
-                    .findFirst();
-
-            if (approverOpt.isEmpty()) {
-                log.error("Assigned approver not found: {}", sopEntry.getAssignedApproverId());
-                return;
-            }
-
-            Approver approver = approverOpt.get();
-
-            Map<String, Object> variables = new HashMap<>();
-            variables.put("sopTitle", sopEntry.getFileName());
-            variables.put("brand", sopEntry.getBrand());
-            variables.put("category", sopEntry.getFileCategory());
-            variables.put("uploadedBy", sopEntry.getUploadedBy());
-            variables.put("pendingAt", sopEntry.getCreatedAt()); // Use createdAt since pendingAt removed
-            variables.put("expiryDate", sopEntry.getCreatedAt().plusDays(7)); // Use createdAt
-            // TODO: Generate actual approval link with token
-            variables.put("approvalLink", "http://localhost:3000/approval/" + sopEntry.getId());
-
-            emailService.sendHtmlEmail(
-                    approver.getEmail(),
-                    "[Action Required] SOP Approval Request - " + sopEntry.getFileName(),
-                    "sop-approval-request",
-                    variables,
-                    adminEmail); // CC admin on approval requests
-
-            log.info("Sent approval request email to: {} (CC: {}) for SOP: {}", approver.getEmail(), adminEmail,
-                    sopEntry.getId());
-        } catch (Exception e) {
-            log.error("Failed to send approval request email for SOP: {}", sopEntry.getId(), e);
-        }
-    }
+    // TODO: Reimplement with PendingOperation system
+    /*
+     * private void sendApprovalRequestEmail(SopEntry sopEntry) {
+     * try {
+     * // Get approver details
+     * Optional<Approver> approverOpt =
+     * approverService.getAllActiveApprovers().stream()
+     * .filter(a -> a.getId().equals(sopEntry.getAssignedApproverId()))
+     * .findFirst();
+     * 
+     * if (approverOpt.isEmpty()) {
+     * log.error("Assigned approver not found: {}",
+     * sopEntry.getAssignedApproverId());
+     * return;
+     * }
+     * 
+     * Approver approver = approverOpt.get();
+     * 
+     * Map<String, Object> variables = new HashMap<>();
+     * variables.put("sopTitle", sopEntry.getFileName());
+     * variables.put("brand", sopEntry.getBrand());
+     * variables.put("category", sopEntry.getFileCategory());
+     * variables.put("uploadedBy", sopEntry.getUploadedBy());
+     * variables.put("pendingAt", sopEntry.getCreatedAt()); // Use createdAt since
+     * pendingAt removed
+     * variables.put("expiryDate", sopEntry.getCreatedAt().plusDays(7)); // Use
+     * createdAt
+     * // TODO: Generate actual approval link with token
+     * variables.put("approvalLink", "http://localhost:3000/approval/" +
+     * sopEntry.getId());
+     * 
+     * emailService.sendHtmlEmail(
+     * approver.getEmail(),
+     * "[Action Required] SOP Approval Request - " + sopEntry.getFileName(),
+     * "sop-approval-request",
+     * variables,
+     * adminEmail); // CC admin on approval requests
+     * 
+     * log.info("Sent approval request email to: {} (CC: {}) for SOP: {}",
+     * approver.getEmail(), adminEmail,
+     * sopEntry.getId());
+     * } catch (Exception e) {
+     * log.error("Failed to send approval request email for SOP: {}",
+     * sopEntry.getId(), e);
+     * }
+     * }
+     */
 }

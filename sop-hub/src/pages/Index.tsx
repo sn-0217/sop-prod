@@ -10,7 +10,7 @@ import { PDFPreviewModal } from '@/components/PDFPreviewModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { sopApi } from '@/services/sopApi';
+import { sopApi, approvalApi } from '@/services/sopApi';
 import { Upload, FileText, Search, Italic, FileSearch, X, Info, CheckSquare } from 'lucide-react';
 import { API_BASE_URL } from '@/services/sopApi';
 import { BrandOverview } from '@/components/BrandOverview';
@@ -40,10 +40,30 @@ const Index = () => {
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<SOPFile | null>(null);
 
+  // Track SOPs with pending deletion requests
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
+
   // Load files for selected brand
   useEffect(() => {
     loadFiles();
+    loadPendingDeletions();
   }, [selectedBrand]);
+
+  // Load pending deletion IDs to disable delete buttons
+  const loadPendingDeletions = async () => {
+    try {
+      const pendingOps = await approvalApi.getPendingOperations();
+      const deleteIds = new Set<string>();
+      pendingOps.forEach(op => {
+        if (op.operationType === 'DELETE' && op.sopId) {
+          deleteIds.add(op.sopId);
+        }
+      });
+      setPendingDeleteIds(deleteIds);
+    } catch (error) {
+      console.error('Failed to load pending deletions:', error);
+    }
+  };
 
   const loadFiles = async () => {
     setLoading(true);
@@ -106,7 +126,7 @@ const Index = () => {
     loadFiles();
   }, [searchMode]);
 
-  const handleUpload = async (files: File[], brand: Brand, metadata: { fileCategory: string; uploadedBy: string; assignedApproverId?: string }) => {
+  const handleUpload = async (files: File[], brand: Brand, metadata: { fileCategory: string; uploadedBy: string; version: string; assignedApproverId?: string; comments: string }) => {
     setUploading(true);
     let successCount = 0;
     let failCount = 0;
@@ -127,7 +147,7 @@ const Index = () => {
       });
 
       if (successCount > 0) {
-        toast.success(`Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}`);
+        toast.success(`${successCount} file${successCount !== 1 ? 's' : ''} submitted for approval. Check the "Pending Approvals" tab to review.`);
       }
       if (failCount > 0) {
         const errorMsg = errors.length === 1 ? errors[0] : `Failed to upload ${failCount} files`;
@@ -156,13 +176,13 @@ const Index = () => {
     window.open(url, '_blank');
   };
 
-  const handleUpdate = async (metadata: { fileCategory: string; brand: string; uploadedBy: string }, file?: File) => {
+  const handleUpdate = async (metadata: { fileCategory: string; brand: string; uploadedBy: string; assignedApproverId?: string; comments: string }, file?: File) => {
     if (!selectedFile) return;
 
     setUpdating(true);
     try {
       await sopApi.updateSOP(selectedFile.id, metadata, file);
-      toast.success('SOP updated successfully');
+      toast.success('Update request submitted for approval. Check the "Pending Approvals" tab.');
       setUpdateModalOpen(false);
       setSelectedFile(null);
       loadFiles();
@@ -173,16 +193,17 @@ const Index = () => {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (requestedBy: string, comments: string, assignedApproverId?: string) => {
     if (!selectedFile) return;
 
     setDeleting(true);
     try {
-      await sopApi.deleteSOP(selectedFile.id);
-      toast.success('SOP deleted successfully');
+      await sopApi.deleteSOP(selectedFile.id, requestedBy, comments, assignedApproverId);
+      toast.success('Deletion request submitted for approval. Check the "Pending Approvals" tab.');
       setDeleteDialogOpen(false);
       setSelectedFile(null);
       loadFiles();
+      loadPendingDeletions(); // Refresh to disable delete button for this file
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete SOP');
     } finally {
@@ -346,6 +367,7 @@ const Index = () => {
                     loading={loading}
                     showBrandColumn={selectedBrand === 'home'}
                     showStatusColumn={false}
+                    pendingDeleteIds={pendingDeleteIds}
                     onPreview={handlePreview}
                     onDownload={handleDownload}
                     onUpdate={(file) => {
@@ -361,7 +383,7 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="pending" className="mt-0">
-                <PendingApprovals onPreview={handlePreview} onApprovalSuccess={loadFiles} />
+                <PendingApprovals onApprovalSuccess={() => { loadFiles(); loadPendingDeletions(); }} />
               </TabsContent>
             </Tabs>
           </div>

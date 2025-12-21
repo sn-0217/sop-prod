@@ -11,7 +11,8 @@ import java.time.LocalDateTime;
 @Table(name = "action_history", indexes = {
         @Index(name = "idx_sop_id", columnList = "sopId"),
         @Index(name = "idx_timestamp", columnList = "timestamp"),
-        @Index(name = "idx_action_type", columnList = "actionType")
+        @Index(name = "idx_action_type", columnList = "actionType"),
+        @Index(name = "idx_pending_operation_id", columnList = "pendingOperationId")
 })
 @AllArgsConstructor
 @NoArgsConstructor
@@ -28,6 +29,12 @@ public class ActionHistory {
     private ActionType actionType;
 
     private String sopId; // Nullable - deleted SOPs won't have this
+
+    /**
+     * Link to the pending operation that triggered this action.
+     * Allows tracing which approval/rejection created this history entry.
+     */
+    private String pendingOperationId;
 
     private String sopFileName;
     private String sopBrand;
