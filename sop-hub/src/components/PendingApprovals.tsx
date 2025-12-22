@@ -71,7 +71,7 @@ export function PendingApprovals({ onApprovalSuccess }: PendingApprovalsProps) {
 
     const handlePreviewClick = (operation: PendingOperation, e: React.MouseEvent) => {
         e.stopPropagation();
-        // Only allow preview for UPLOAD and DELETE operations (which have file paths)
+        // Only allow preview for CREATE and DELETE operations (which have file paths)
         if (operation.operationType === 'UPDATE') {
             toast.info('Preview is not available for update operations');
             return;
@@ -127,24 +127,6 @@ export function PendingApprovals({ onApprovalSuccess }: PendingApprovalsProps) {
         }
     };
 
-    const getOperationDetails = (operation: PendingOperation): string => {
-        const data = parseProposedData(operation.proposedData);
-        if (!data) return 'No details available';
-
-        switch (operation.operationType) {
-            case 'UPLOAD':
-                return data.fileName || 'New document';
-            case 'UPDATE':
-                const changes = data.changes || {};
-                const changeCount = Object.keys(changes).length;
-                return `${changeCount} field${changeCount !== 1 ? 's' : ''} modified`;
-            case 'DELETE':
-                return data.snapshot?.fileName || 'Document deletion';
-            default:
-                return 'Unknown operation';
-        }
-    };
-
     // Get just the document name for the Document Name column
     const getDocumentName = (operation: PendingOperation): string => {
         const data = parseProposedData(operation.proposedData);
@@ -177,25 +159,12 @@ export function PendingApprovals({ onApprovalSuccess }: PendingApprovalsProps) {
     }
 
     if (pendingOperations.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <FileText className="h-12 w-12 mb-4 opacity-50" />
-                <p className="text-lg font-medium">No pending approvals</p>
-                <p className="text-sm">All operations have been reviewed</p>
-            </div>
-        );
+        return null;
     }
 
     return (
         <>
             <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold">Pending Approvals</h2>
-                    <Badge variant="secondary" className="text-lg px-3 py-1">
-                        {pendingOperations.length} Pending
-                    </Badge>
-                </div>
-
                 <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
                     <Table>
                         <TableHeader>

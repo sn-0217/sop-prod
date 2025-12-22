@@ -62,9 +62,10 @@ export function UploadModal({ open, onClose, selectedBrand, onUpload, uploading 
       setComments('');
     } else {
       // Initialize brand based on selectedBrand prop
-      if (selectedBrand !== 'home') {
-        setBrand(selectedBrand);
+      if (selectedBrand !== 'home' && selectedBrand !== 'all') {
+        setBrand(selectedBrand as Brand);
       } else {
+        // Default to knitwell when on home or all tabs
         setBrand('knitwell');
       }
     }
@@ -215,7 +216,7 @@ export function UploadModal({ open, onClose, selectedBrand, onUpload, uploading 
                         type="button"
                         variant={brand === b.value ? 'default' : 'outline'}
                         onClick={() => setBrand(b.value)}
-                        disabled={uploading || selectedBrand !== 'home'}
+                        disabled={uploading || (selectedBrand !== 'home' && selectedBrand !== 'all')}
                         className="h-10"
                       >
                         {b.label}

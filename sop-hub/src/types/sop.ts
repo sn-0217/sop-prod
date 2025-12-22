@@ -1,5 +1,5 @@
 export type Brand = 'knitwell' | 'chicos' | 'talbots';
-export type BrandFilter = Brand | 'home';
+export type BrandFilter = Brand | 'home' | 'all';
 
 export type PendingOperationType = 'UPLOAD' | 'UPDATE' | 'DELETE';
 export type PendingOperationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -38,4 +38,5 @@ export interface SOPFile {
   modifiedAt?: string;
   version: string;
   isActive: boolean;
+  status?: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
 }

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Brand, BrandFilter, SOPFile } from '@/types/sop';
 import { BrandSidebar } from '@/components/BrandSidebar';
 import { SOPTable } from '@/components/SOPTable';
-import { StatisticsBar } from '@/components/StatisticsBar';
 import { UploadModal } from '@/components/UploadModal';
 import { UpdateModal } from '@/components/UpdateModal';
 import { DeleteDialog } from '@/components/DeleteDialog';
@@ -11,15 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { sopApi, approvalApi } from '@/services/sopApi';
-import { Upload, FileText, Search, Italic, FileSearch, X, Info, CheckSquare } from 'lucide-react';
+import { Upload, FileText, Search, FileSearch, X, Info } from 'lucide-react';
 import { API_BASE_URL } from '@/services/sopApi';
-import { BrandOverview } from '@/components/BrandOverview';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ScrollToTop } from '@/components/ScrollToTop';
-import { TableSkeleton, StatsSkeleton, BrandOverviewSkeleton } from '@/components/SkeletonLoaders';
+import { TableSkeleton } from '@/components/SkeletonLoaders';
 import { AboutDialog } from '@/components/AboutDialog';
-import { PendingApprovals } from '@/components/PendingApprovals';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Dashboard } from '@/components/Dashboard';
 
 const Index = () => {
   const [selectedBrand, setSelectedBrand] = useState<BrandFilter>('home');
@@ -68,13 +65,18 @@ const Index = () => {
   const loadFiles = async () => {
     setLoading(true);
     try {
-      const data = await sopApi.getSOPs(selectedBrand === 'home' ? 'knitwell' : selectedBrand);
-
-      let filteredData = data;
-      if (selectedBrand !== 'home') {
-        filteredData = data.filter(file => file.brand === selectedBrand);
+      if (selectedBrand === 'home') {
+        // Home page shows dashboard, no files needed
+        setFiles([]);
+      } else if (selectedBrand === 'all') {
+        // All tab: load all documents (API returns all when called with any brand)
+        const data = await sopApi.getSOPs('knitwell');
+        setFiles(data);
+      } else {
+        // Brand tab: load specific brand and filter
+        const data = await sopApi.getSOPs(selectedBrand);
+        setFiles(data.filter(file => file.brand === selectedBrand));
       }
-      setFiles(filteredData);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load SOPs');
     } finally {
@@ -91,7 +93,7 @@ const Index = () => {
     if (searchMode === 'content') {
       setSearching(true);
       try {
-        const brand = selectedBrand === 'home' ? undefined : selectedBrand;
+        const brand = (selectedBrand === 'home' || selectedBrand === 'all') ? undefined : selectedBrand;
         const results = await sopApi.searchSOPsByContent(query, brand);
         setFiles(results);
         toast.success(`Found ${results.length} document${results.length !== 1 ? 's' : ''}`);
@@ -222,29 +224,31 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="bg-card border-b border-border sticky top-0 z-50">
-          <div className="max-w-[95%] mx-auto px-8 py-6">
-            <div className="flex items-center justify-between gap-8">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <FileText className="h-5 w-5 text-primary" />
+        {/* Toolbar - only show on non-home pages */}
+        {selectedBrand !== 'home' && (
+          <header className="bg-card border-b border-border sticky top-0 z-50">
+            <div className="max-w-[95%] mx-auto px-8 py-4">
+              <div className="flex items-center justify-between gap-8">
+                {/* Title */}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-foreground tracking-tight">
+                      SOP Management
+                    </h1>
+                    <p className="text-xs text-muted-foreground">
+                      <span className="capitalize font-medium text-foreground">
+                        {selectedBrand === 'all' ? 'All Brands' : selectedBrand}
+                      </span>
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                    SOP Management
-                  </h1>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    <span className="capitalize font-medium text-foreground">
-                      {selectedBrand === 'home' ? 'All Brands' : selectedBrand}
-                    </span>
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-3 flex-1 justify-end max-w-2xl">
-                <div className="flex items-center gap-2 flex-1 max-w-md">
-                  <div className="relative flex-1">
+                {/* Search and Actions - Right side */}
+                <div className="flex items-center gap-3">
+                  <div className="relative w-64">
                     {searching && searchMode === 'content' && (
                       <div className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4">
                         <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -279,113 +283,88 @@ const Index = () => {
                   >
                     <FileSearch className="h-4 w-4" />
                   </Button>
+
+                  <div className="w-px h-6 bg-border" />
+
+                  <Button
+                    onClick={() => setAboutDialogOpen(true)}
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10 shrink-0"
+                    title="About"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+
+                  <ThemeToggle />
+
+                  <Button
+                    onClick={() => setUploadModalOpen(true)}
+                    className="gap-2 shrink-0 h-10 px-4 shadow-sm"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload
+                  </Button>
                 </div>
-
-                {/* About Button */}
-                <Button
-                  onClick={() => setAboutDialogOpen(true)}
-                  variant="outline"
-                  size="icon"
-                  className="h-10 w-10 shrink-0"
-                  title="About"
-                >
-                  <Info className="h-4 w-4" />
-                </Button>
-
-                <ThemeToggle />
-
-                <Button
-                  onClick={() => setUploadModalOpen(true)}
-                  className="gap-2 shrink-0 h-10 px-4 shadow-sm"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload
-                </Button>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         {/* Content */}
         <div className="flex-1 bg-background">
           <div className="max-w-[95%] mx-auto px-8 py-8">
-            {/* Brand Overview - Only on Home */}
-            {selectedBrand === 'home' && (
-              loading ? (
-                <BrandOverviewSkeleton />
-              ) : (
-                <BrandOverview
-                  files={files}
-                  onSelectBrand={(brand) => setSelectedBrand(brand)}
-                />
-              )
-            )}
-
-            {/* Statistics Bar - Always visible */}
-            {loading ? (
-              <StatsSkeleton />
+            {/* Dashboard for Home, SOPTable for Brands */}
+            {selectedBrand === 'home' ? (
+              <Dashboard
+                onUploadClick={() => setUploadModalOpen(true)}
+                onBrandSelect={(brand) => setSelectedBrand(brand)}
+                onApprovalComplete={() => { loadFiles(); loadPendingDeletions(); }}
+              />
             ) : (
-              <StatisticsBar files={files} />
-            )}
-
-            {/* Tabs for SOPs and Pending Approvals */}
-            <Tabs defaultValue="sops" className="w-full mt-6">
-              <TabsList className="mb-6">
-                <TabsTrigger value="sops" className="gap-2">
-                  <FileText className="h-4 w-4" />
-                  All SOPs
-                </TabsTrigger>
-                <TabsTrigger value="pending" className="gap-2">
-                  <CheckSquare className="h-4 w-4" />
-                  Pending Approvals
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="sops" className="mt-0">
-                {/* Table/Grid */}
-                {loading ? (
-                  <TableSkeleton />
-                ) : filteredFiles.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="w-20 h-20 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
-                      <FileText className="h-10 w-10 text-muted-foreground" />
+              <>
+                {/* SOPTable */}
+                <div>
+                  {loading ? (
+                    <TableSkeleton />
+                  ) : filteredFiles.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                      <div className="w-20 h-20 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
+                        <FileText className="h-10 w-10 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground mb-1">No documents found</h3>
+                      <p className="text-sm text-muted-foreground mb-6">
+                        {searchQuery ? 'Try adjusting your search terms' : 'Upload your first SOP document to get started'}
+                      </p>
+                      {!searchQuery && (
+                        <Button onClick={() => setUploadModalOpen(true)} className="gap-2">
+                          <Upload className="h-4 w-4" />
+                          Upload Document
+                        </Button>
+                      )}
                     </div>
-                    <h3 className="text-lg font-semibold text-foreground mb-1">No documents found</h3>
-                    <p className="text-sm text-muted-foreground mb-6">
-                      {searchQuery ? 'Try adjusting your search terms' : 'Upload your first SOP document to get started'}
-                    </p>
-                    {!searchQuery && (
-                      <Button onClick={() => setUploadModalOpen(true)} className="gap-2">
-                        <Upload className="h-4 w-4" />
-                        Upload Document
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <SOPTable
-                    files={filteredFiles}
-                    loading={loading}
-                    showBrandColumn={selectedBrand === 'home'}
-                    showStatusColumn={false}
-                    pendingDeleteIds={pendingDeleteIds}
-                    onPreview={handlePreview}
-                    onDownload={handleDownload}
-                    onUpdate={(file) => {
-                      setSelectedFile(file);
-                      setUpdateModalOpen(true);
-                    }}
-                    onDelete={(file) => {
-                      setSelectedFile(file);
-                      setDeleteDialogOpen(true);
-                    }}
-                  />
-                )}
-              </TabsContent>
-
-              <TabsContent value="pending" className="mt-0">
-                <PendingApprovals onApprovalSuccess={() => { loadFiles(); loadPendingDeletions(); }} />
-              </TabsContent>
-            </Tabs>
+                  ) : (
+                    <SOPTable
+                      files={filteredFiles}
+                      loading={loading}
+                      showBrandColumn={selectedBrand === 'all'}
+                      showStatusColumn={false}
+                      pendingDeleteIds={pendingDeleteIds}
+                      onPreview={handlePreview}
+                      onDownload={handleDownload}
+                      onUpdate={(file) => {
+                        setSelectedFile(file);
+                        setUpdateModalOpen(true);
+                      }}
+                      onDelete={(file) => {
+                        setSelectedFile(file);
+                        setDeleteDialogOpen(true);
+                      }}
+                    />
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 

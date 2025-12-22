@@ -1,6 +1,6 @@
 import { Brand, BrandFilter } from '@/types/sop';
 import { cn } from '@/lib/utils';
-import { Building2, Home } from 'lucide-react';
+import { Home, Files } from 'lucide-react';
 
 interface BrandSidebarProps {
   selectedBrand: BrandFilter;
@@ -18,6 +18,7 @@ export function BrandSidebar({ selectedBrand, onSelectBrand }: BrandSidebarProps
     <div className="border-b border-border bg-card/50 backdrop-blur-sm">
       <div className="px-8 py-5 flex items-center gap-8">
         <nav className="flex gap-2">
+          {/* Home */}
           <button
             onClick={() => onSelectBrand('home')}
             className={cn(
@@ -31,7 +32,27 @@ export function BrandSidebar({ selectedBrand, onSelectBrand }: BrandSidebarProps
             <Home className="w-4 h-4" />
             <span>Home</span>
           </button>
+
           <div className="w-px h-6 bg-border mx-2 self-center" />
+
+          {/* All */}
+          <button
+            onClick={() => onSelectBrand('all' as BrandFilter)}
+            className={cn(
+              'px-4 py-2 rounded-md transition-all duration-200',
+              'flex items-center gap-2 font-medium text-sm',
+              selectedBrand === 'all'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Files className="w-4 h-4" />
+            <span>All</span>
+          </button>
+
+          <div className="w-px h-6 bg-border mx-2 self-center" />
+
+          {/* Brand tabs */}
           {brands.map(brand => (
             <button
               key={brand.value}

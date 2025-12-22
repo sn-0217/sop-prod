@@ -121,14 +121,7 @@ All colors MUST be HSL.
         @apply font-semibold tracking-tight;
     }
 
-    /* Smooth theme transitions - butter smooth! */
-    *,
-    ::before,
-    ::after {
-        transition-property: background-color, border-color, color, fill, stroke;
-        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 200ms;
-    }
+
 
     /* Preserve existing transitions for interactive elements */
     button,
@@ -149,5 +142,16 @@ All colors MUST be HSL.
             transition-duration: 0ms !important;
             animation-duration: 0ms !important;
         }
+    }
+}
+
+@layer utilities {
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
     }
 }
