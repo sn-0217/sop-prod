@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Pencil, Trash2, FileText, ArrowUpDown, ArrowUp, ArrowDown, Layers } from 'lucide-react';
+import { Download, FilePenLine, Trash, FileText, ArrowUpDown, ArrowUp, ArrowDown, ListFilter } from 'lucide-react';
 import { formatBytes, formatDate } from '@/lib/formatters';
 
 interface SOPTableProps {
@@ -154,14 +154,14 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
   return (
     <div className="space-y-4">
       <div className="flex justify-end items-center gap-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-card px-3 py-1.5 rounded-md border border-border shadow-sm">
-          <Layers className="h-4 w-4" />
-          <span>Group by:</span>
+        <div className="flex items-center">
           <Select value={groupBy} onValueChange={(value) => setGroupBy(value as GroupBy)}>
-            <SelectTrigger className="h-8 w-[140px] border-none bg-transparent focus:ring-0 px-2">
+            <SelectTrigger className="h-9 w-auto gap-2 pl-3 pr-4 text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border-transparent hover:border-border transition-all rounded-lg text-foreground shadow-none">
+              <ListFilter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Group by:</span>
               <SelectValue placeholder="None" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent align="end" className="w-[180px]">
               <SelectItem value="none">None</SelectItem>
               <SelectItem value="brand">Brand</SelectItem>
               <SelectItem value="fileCategory">Category</SelectItem>
@@ -176,9 +176,9 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
       <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/30 hover:bg-muted/30">
+            <TableRow className="h-11 hover:bg-transparent border-b border-border/60">
               <TableHead
-                className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap cursor-pointer hover:text-foreground hover:bg-transparent transition-colors"
                 onClick={() => handleSort('fileName')}
               >
                 <div className="flex items-center">
@@ -188,7 +188,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
               </TableHead>
               {showBrandColumn && (
                 <TableHead
-                  className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap cursor-pointer hover:text-foreground hover:bg-transparent transition-colors"
                   onClick={() => handleSort('brand')}
                 >
                   <div className="flex items-center">
@@ -198,7 +198,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                 </TableHead>
               )}
               <TableHead
-                className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap cursor-pointer hover:text-foreground hover:bg-transparent transition-colors"
                 onClick={() => handleSort('version')}
               >
                 <div className="flex items-center">
@@ -207,7 +207,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                 </div>
               </TableHead>
               <TableHead
-                className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap cursor-pointer hover:text-foreground hover:bg-transparent transition-colors"
                 onClick={() => handleSort('fileCategory')}
               >
                 <div className="flex items-center">
@@ -216,7 +216,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                 </div>
               </TableHead>
               <TableHead
-                className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap cursor-pointer hover:text-foreground hover:bg-transparent transition-colors"
                 onClick={() => handleSort('uploadedBy')}
               >
                 <div className="flex items-center">
@@ -225,7 +225,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                 </div>
               </TableHead>
               <TableHead
-                className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap cursor-pointer hover:text-foreground hover:bg-transparent transition-colors"
                 onClick={() => handleSort('fileSize')}
               >
                 <div className="flex items-center">
@@ -234,7 +234,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                 </div>
               </TableHead>
               <TableHead
-                className="font-semibold text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap cursor-pointer hover:text-foreground hover:bg-transparent transition-colors"
                 onClick={() => handleSort('modifiedAt')}
               >
                 <div className="flex items-center">
@@ -243,9 +243,9 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                 </div>
               </TableHead>
               {showStatusColumn && (
-                <TableHead className="font-semibold text-foreground">Status</TableHead>
+                <TableHead className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap">Status</TableHead>
               )}
-              <TableHead className="text-right font-semibold text-foreground">Actions</TableHead>
+              <TableHead className="h-11 px-4 text-right text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -264,8 +264,8 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                   </TableRow>
                 )}
                 {groupFiles.map(file => (
-                  <TableRow key={file.id} className="hover:bg-muted/20 transition-colors">
-                    <TableCell className="font-medium">
+                  <TableRow key={file.id} className="group hover:bg-muted/40 transition-colors border-b border-border/40 data-[state=selected]:bg-muted">
+                    <TableCell className="py-3 font-medium text-xs">
                       <button
                         onClick={(e) => {
                           if (e.ctrlKey || e.metaKey) {
@@ -284,35 +284,35 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                       </button>
                     </TableCell>
                     {showBrandColumn && (
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize font-normal">
+                      <TableCell className="py-3 text-xs">
+                        <Badge variant="outline" className="capitalize font-normal bg-background/50">
                           {file.brand}
                         </Badge>
                       </TableCell>
                     )}
-                    <TableCell>
+                    <TableCell className="py-3 text-xs">
                       {file.version ? (
-                        <Badge variant="outline" className="font-mono text-xs">
+                        <Badge variant="outline" className="font-mono text-xs bg-background/50">
                           {file.version}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground/50">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-3 text-xs">
                       {file.fileCategory ? (
-                        <Badge variant="secondary" className="font-normal">
+                        <Badge variant="secondary" className="font-normal bg-secondary/50">
                           {file.fileCategory}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground/50">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground py-3 text-xs">
                       {file.uploadedBy || <span className="text-muted-foreground/50">—</span>}
                     </TableCell>
-                    <TableCell className="text-muted-foreground font-medium">{formatBytes(file.fileSize)}</TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground font-medium py-3 text-xs">{formatBytes(file.fileSize)}</TableCell>
+                    <TableCell className="text-muted-foreground py-3 text-xs">
                       {formatDate(file.modifiedAt)}
                     </TableCell>
                     {showStatusColumn && (
@@ -342,7 +342,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                           onClick={() => onUpdate(file)}
                           className="h-9 w-9 p-0 hover:bg-muted"
                         >
-                          <Pencil className="h-4 w-4" />
+                          <FilePenLine className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -360,7 +360,7 @@ export function SOPTable({ files, onPreview, onDownload, onUpdate, onDelete, loa
                           className="h-9 w-9 p-0 hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 disabled:cursor-not-allowed"
                           title={pendingDeleteIds.has(file.id) ? 'Deletion pending approval' : 'Delete'}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>

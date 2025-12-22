@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { PendingOperation } from '@/types/sop';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileText, CheckCircle2, XCircle, Upload, Edit, Trash2, Loader2 } from 'lucide-react';
+import { FileText, CheckCircle2, XCircle, Upload, Edit, Trash, Loader2, Clock } from 'lucide-react';
 import {
     Table,
     TableBody,
@@ -100,7 +100,7 @@ export function PendingApprovals({ onApprovalSuccess }: PendingApprovalsProps) {
             case 'UPDATE':
                 return <Edit className="h-4 w-4 text-orange-600" />;
             case 'DELETE':
-                return <Trash2 className="h-4 w-4 text-red-600" />;
+                return <Trash className="h-4 w-4 text-red-600" />;
             default:
                 return <FileText className="h-4 w-4" />;
         }
@@ -168,13 +168,13 @@ export function PendingApprovals({ onApprovalSuccess }: PendingApprovalsProps) {
                 <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
                     <Table>
                         <TableHeader>
-                            <TableRow className="bg-muted/30 hover:bg-muted/30">
-                                <TableHead className="font-semibold text-foreground">Operation</TableHead>
-                                <TableHead className="font-semibold text-foreground">Document Name</TableHead>
-                                <TableHead className="font-semibold text-foreground">Requested By</TableHead>
-                                <TableHead className="font-semibold text-foreground">Requested At</TableHead>
-                                <TableHead className="font-semibold text-foreground">Auto-Approval</TableHead>
-                                <TableHead className="font-semibold text-foreground text-right">Actions</TableHead>
+                            <TableRow className="h-11 hover:bg-transparent border-b border-border/60">
+                                <TableHead className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap">Operation</TableHead>
+                                <TableHead className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap">Document Name</TableHead>
+                                <TableHead className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap">Requested By</TableHead>
+                                <TableHead className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap">Requested At</TableHead>
+                                <TableHead className="h-11 px-4 text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap">Auto-Approval</TableHead>
+                                <TableHead className="h-11 px-4 text-right text-xs font-medium uppercase tracking-wider text-secondary-foreground w-auto whitespace-nowrap">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -183,9 +183,9 @@ export function PendingApprovals({ onApprovalSuccess }: PendingApprovalsProps) {
                                 return (
                                     <TableRow
                                         key={operation.id}
-                                        className="hover:bg-muted/20 transition-colors"
+                                        className="group hover:bg-muted/40 transition-colors border-b border-border/40"
                                     >
-                                        <TableCell>
+                                        <TableCell className="py-3">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
                                                     {getOperationIcon(operation.operationType)}
@@ -195,7 +195,7 @@ export function PendingApprovals({ onApprovalSuccess }: PendingApprovalsProps) {
                                                 </Badge>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="font-medium">
+                                        <TableCell className="py-3 font-medium text-xs">
                                             {canPreview(operation) ? (
                                                 <button
                                                     onClick={(e) => handlePreviewClick(operation, e)}
@@ -210,13 +210,13 @@ export function PendingApprovals({ onApprovalSuccess }: PendingApprovalsProps) {
                                                 </span>
                                             )}
                                         </TableCell>
-                                        <TableCell className="text-muted-foreground">
+                                        <TableCell className="text-muted-foreground py-3 text-xs">
                                             {operation.requestedBy || <span className="text-muted-foreground/50">—</span>}
                                         </TableCell>
-                                        <TableCell className="text-muted-foreground">
+                                        <TableCell className="text-muted-foreground py-3 text-xs">
                                             {formatDate(operation.requestedAt)}
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="py-3 text-xs">
                                             {daysRemaining > 0 ? (
                                                 <Badge variant="outline" className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800">
                                                     {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}
@@ -227,7 +227,7 @@ export function PendingApprovals({ onApprovalSuccess }: PendingApprovalsProps) {
                                                 </Badge>
                                             )}
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right py-3 text-xs">
                                             <div className="flex items-center justify-end gap-2">
                                                 <Button
                                                     size="sm"
