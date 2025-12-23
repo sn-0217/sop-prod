@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import { sopApi, approvalApi } from '@/services/sopApi';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Clock, Upload, FolderOpen, CheckCircle, Activity, TrendingUp, Calendar, Info } from 'lucide-react';
+import { FileText, Clock, Upload, FolderOpen, CheckCircle, Activity, TrendingUp, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PendingApprovals } from './PendingApprovals';
-import { ThemeToggle } from './ThemeToggle';
-import { AboutDialog } from './AboutDialog';
+import { WelcomeBanner } from './WelcomeBanner';
 
 
 interface DashboardProps {
@@ -44,7 +43,6 @@ export function Dashboard({ onUploadClick, onBrandSelect, onApprovalComplete }: 
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [showPendingApprovals, setShowPendingApprovals] = useState(false);
     const [weeklyStats, setWeeklyStats] = useState<{ date: string, count: number, label: string }[]>([]);
-    const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
 
     useEffect(() => {
         loadStats();
@@ -155,42 +153,40 @@ export function Dashboard({ onUploadClick, onBrandSelect, onApprovalComplete }: 
             label: 'Total Documents',
             value: stats.total,
             icon: FileText,
-            color: 'bg-blue-500',
-            bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+            color: 'bg-gradient-to-br from-blue-500 to-blue-600',
+            textColor: 'text-blue-600 dark:text-blue-400',
             onClick: () => onBrandSelect('all'),
         },
         {
             label: 'Knitwell',
             value: stats.knitwell,
             icon: FolderOpen,
-            color: 'bg-emerald-500',
-            bgColor: 'bg-emerald-50 dark:bg-emerald-950/30',
+            color: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+            textColor: 'text-emerald-600 dark:text-emerald-400',
             onClick: () => onBrandSelect('knitwell'),
         },
         {
             label: "Chico's",
             value: stats.chicos,
             icon: FolderOpen,
-            color: 'bg-purple-500',
-            bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+            color: 'bg-gradient-to-br from-purple-500 to-purple-600',
+            textColor: 'text-purple-600 dark:text-purple-400',
             onClick: () => onBrandSelect('chicos'),
         },
         {
             label: 'Talbots',
             value: stats.talbots,
             icon: FolderOpen,
-            color: 'bg-amber-500',
-            bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+            color: 'bg-gradient-to-br from-amber-500 to-amber-600',
+            textColor: 'text-amber-600 dark:text-amber-400',
             onClick: () => onBrandSelect('talbots'),
         },
         {
             label: 'Pending Approvals',
             value: stats.pendingApprovals,
             icon: Clock,
-            color: stats.pendingApprovals > 0 ? 'bg-orange-500' : 'bg-green-500',
-            bgColor: stats.pendingApprovals > 0
-                ? 'bg-orange-50 dark:bg-orange-950/30'
-                : 'bg-green-50 dark:bg-green-950/30',
+            color: stats.pendingApprovals > 0 ? 'bg-gradient-to-br from-orange-500 to-orange-600' : 'bg-gradient-to-br from-green-500 to-green-600',
+            textColor: stats.pendingApprovals > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400',
             highlight: stats.pendingApprovals > 0,
             onClick: () => {
                 if (stats.pendingApprovals > 0) {
@@ -201,30 +197,9 @@ export function Dashboard({ onUploadClick, onBrandSelect, onApprovalComplete }: 
     ];
 
     return (
-        <div className="space-y-8">
-            {/* Welcome Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-                    <p className="text-muted-foreground mt-1">Welcome to SOP Management System</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <Button
-                        onClick={() => setAboutDialogOpen(true)}
-                        variant="outline"
-                        size="icon"
-                        className="h-10 w-10 shrink-0"
-                        title="About"
-                    >
-                        <Info className="h-4 w-4" />
-                    </Button>
-                    <ThemeToggle />
-                    <Button onClick={onUploadClick} className="gap-2">
-                        <Upload className="w-4 h-4" />
-                        Upload Document
-                    </Button>
-                </div>
-            </div>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Premium Welcome Banner */}
+            <WelcomeBanner onUploadClick={onUploadClick} />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -238,22 +213,21 @@ export function Dashboard({ onUploadClick, onBrandSelect, onApprovalComplete }: 
                             onClick={card.onClick}
                             disabled={isDisabled}
                             className={cn(
-                                "p-4 rounded-xl border transition-all text-left",
-                                !isDisabled && "hover:scale-[1.02] hover:shadow-md cursor-pointer",
+                                "relative overflow-hidden p-6 rounded-2xl border bg-card transition-all text-left",
+                                !isDisabled && "hover:-translate-y-1 hover:shadow-lg cursor-pointer",
                                 isDisabled && "cursor-default opacity-80",
-                                card.bgColor,
-                                card.highlight && "ring-2 ring-orange-500/20"
+                                card.highlight && "ring-2 ring-orange-500/50 shadow-orange-500/10"
                             )}
                         >
-                            <div className="flex items-center gap-3">
-                                <div className={cn("p-2 rounded-lg", card.color)}>
-                                    <card.icon className="w-4 h-4 text-white" />
-                                </div>
-                                <div className="space-y-0.5">
-                                    <p className="text-2xl font-bold text-foreground">
+                            <div className="flex items-start justify-between">
+                                <div className="space-y-1">
+                                    <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
+                                    <p className="text-3xl font-bold text-foreground tracking-tight">
                                         {loadingStats ? '...' : card.value}
                                     </p>
-                                    <p className="text-xs text-muted-foreground">{card.label}</p>
+                                </div>
+                                <div className={cn("p-2.5 rounded-xl shadow-sm", card.color)}>
+                                    <card.icon className="w-5 h-5 text-white" />
                                 </div>
                             </div>
                         </button>
@@ -283,25 +257,26 @@ export function Dashboard({ onUploadClick, onBrandSelect, onApprovalComplete }: 
             )}
             {/* Call to action if no pending approvals shown */}
             {!showPendingApprovals && stats.pendingApprovals > 0 && (
-                <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800">
+                <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Clock className="w-5 h-5 text-orange-500" />
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-sm">
+                                <Clock className="w-6 h-6 text-white" />
+                            </div>
                             <div>
-                                <p className="font-medium text-orange-700 dark:text-orange-300">
+                                <p className="text-lg font-semibold text-foreground">
                                     {stats.pendingApprovals} document{stats.pendingApprovals !== 1 ? 's' : ''} awaiting approval
                                 </p>
-                                <p className="text-sm text-orange-600 dark:text-orange-400">
-                                    Click to review and approve pending operations
+                                <p className="text-sm text-muted-foreground">
+                                    Action required: Review and approve pending operations
                                 </p>
                             </div>
                         </div>
                         <Button
-                            variant="outline"
-                            className="border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-300"
+                            className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 border border-transparent hover:border-orange-200 dark:hover:border-orange-800 shadow-none hover:shadow-sm transition-all duration-200 font-medium px-6"
                             onClick={() => setShowPendingApprovals(true)}
                         >
-                            Review
+                            Review Request
                         </Button>
                     </div>
                 </div>
@@ -334,7 +309,7 @@ export function Dashboard({ onUploadClick, onBrandSelect, onApprovalComplete }: 
                         {recentDocs.map((doc, i) => (
                             <div
                                 key={i}
-                                className="min-w-[85%] sm:min-w-[45%] lg:min-w-[calc(25%-0.75rem)] flex-shrink-0 snap-start group flex flex-col items-start gap-3 p-4 rounded-xl bg-muted/20 border border-transparent hover:border-border hover:bg-muted/40 hover:shadow-sm transition-all cursor-pointer"
+                                className="min-w-[85%] sm:min-w-[45%] lg:min-w-[calc(25%-0.75rem)] flex-shrink-0 snap-start group flex flex-col items-start gap-3 p-4 rounded-xl bg-card border border-border hover:border-primary/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer"
                                 onClick={() => onBrandSelect(doc.brand as any)}
                             >
                                 <div className="flex items-center justify-between w-full">
@@ -480,13 +455,15 @@ export function Dashboard({ onUploadClick, onBrandSelect, onApprovalComplete }: 
                                         <div className="relative w-full flex justify-center h-full items-end">
                                             <div
                                                 className={cn(
-                                                    "w-full max-w-[30px] rounded-t-sm transition-all duration-500",
-                                                    isToday ? "bg-primary" : "bg-primary/20 hover:bg-primary/40"
+                                                    "relative w-full max-w-[24px] rounded-t-md transition-all duration-700 ease-out",
+                                                    isToday
+                                                        ? "bg-gradient-to-t from-primary to-primary/80 shadow-[0_0_10px_rgba(var(--primary),0.3)]"
+                                                        : "bg-gradient-to-t from-primary/30 to-primary/50 hover:from-primary/50 hover:to-primary/70"
                                                 )}
                                                 style={{ height: day.count > 0 ? heightStr : '4px' }}
                                             >
                                                 {day.count > 0 && (
-                                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-popover px-1.5 py-0.5 rounded shadow-sm border">
+                                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-bold opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap bg-foreground text-background px-2 py-1 rounded-md shadow-lg transform -translate-y-1 group-hover:translate-y-0">
                                                         {day.count}
                                                     </div>
                                                 )}
@@ -505,10 +482,6 @@ export function Dashboard({ onUploadClick, onBrandSelect, onApprovalComplete }: 
                     )}
                 </div>
             </div>
-            <AboutDialog
-                open={aboutDialogOpen}
-                onClose={() => setAboutDialogOpen(false)}
-            />
         </div>
     );
 }

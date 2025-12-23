@@ -10,12 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { sopApi, approvalApi } from '@/services/sopApi';
-import { Upload, FileText, Search, FileSearch, X, Info } from 'lucide-react';
+import { Upload, FileText, Search, FileSearch, X } from 'lucide-react';
 import { API_BASE_URL } from '@/services/sopApi';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ScrollToTop } from '@/components/ScrollToTop';
 import { TableSkeleton } from '@/components/SkeletonLoaders';
-import { AboutDialog } from '@/components/AboutDialog';
 import { Dashboard } from '@/components/Dashboard';
 
 const Index = () => {
@@ -34,7 +33,7 @@ const Index = () => {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
-  const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
+
   const [selectedFile, setSelectedFile] = useState<SOPFile | null>(null);
 
   // Track SOPs with pending deletion requests
@@ -291,20 +290,6 @@ const Index = () => {
                     <FileSearch className="h-4 w-4" />
                   </Button>
 
-                  <div className="w-px h-6 bg-border" />
-
-                  <Button
-                    onClick={() => setAboutDialogOpen(true)}
-                    variant="outline"
-                    size="icon"
-                    className="h-10 w-10 shrink-0"
-                    title="About"
-                  >
-                    <Info className="h-4 w-4" />
-                  </Button>
-
-                  <ThemeToggle />
-
                   <Button
                     onClick={() => setUploadModalOpen(true)}
                     className="gap-2 shrink-0 h-10 px-4 shadow-sm"
@@ -431,11 +416,6 @@ const Index = () => {
         file={selectedFile}
         onConfirm={handleDelete}
         deleting={deleting}
-      />
-
-      <AboutDialog
-        open={aboutDialogOpen}
-        onClose={() => setAboutDialogOpen(false)}
       />
 
       <ScrollToTop />

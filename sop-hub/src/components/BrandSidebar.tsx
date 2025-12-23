@@ -1,6 +1,10 @@
 import { Brand, BrandFilter } from '@/types/sop';
 import { cn } from '@/lib/utils';
-import { Home, Files } from 'lucide-react';
+import { Home, Files, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ThemeToggle } from './ThemeToggle';
+import { AboutDialog } from './AboutDialog';
+import { useState } from 'react';
 
 interface BrandSidebarProps {
   selectedBrand: BrandFilter;
@@ -14,9 +18,11 @@ const brands: { value: Brand; label: string; color: string }[] = [
 ];
 
 export function BrandSidebar({ selectedBrand, onSelectBrand }: BrandSidebarProps) {
+  const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
+
   return (
     <div className="border-b border-border bg-card/50 backdrop-blur-sm">
-      <div className="px-8 py-5 flex items-center gap-8">
+      <div className="px-8 py-5 flex items-center justify-between gap-8">
         <nav className="flex gap-2">
           {/* Home */}
           <button
@@ -75,7 +81,27 @@ export function BrandSidebar({ selectedBrand, onSelectBrand }: BrandSidebarProps
             </button>
           ))}
         </nav>
+
+
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <div className="w-px h-6 bg-border mx-2" />
+          <Button
+            onClick={() => setAboutDialogOpen(true)}
+            variant="ghost"
+            className="h-9 gap-2 px-3 text-muted-foreground hover:text-foreground font-medium"
+          >
+            <Info className="h-4 w-4" />
+            About
+          </Button>
+
+        </div>
       </div>
+
+      <AboutDialog
+        open={aboutDialogOpen}
+        onClose={() => setAboutDialogOpen(false)}
+      />
     </div>
   );
 }

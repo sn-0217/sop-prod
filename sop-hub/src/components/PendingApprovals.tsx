@@ -232,16 +232,15 @@ export function PendingApprovals({ onApprovalSuccess }: PendingApprovalsProps) {
                                                 <Button
                                                     size="sm"
                                                     onClick={(e) => handleApprovalClick(operation, 'approve', e)}
-                                                    className="bg-green-600 hover:bg-green-700 text-white gap-1 h-8 px-3"
+                                                    className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800 gap-1 h-8 px-3 shadow-none hover:shadow-sm transition-all duration-200"
                                                 >
                                                     <CheckCircle2 className="h-3.5 w-3.5" />
                                                     Approve
                                                 </Button>
                                                 <Button
                                                     size="sm"
-                                                    variant="destructive"
                                                     onClick={(e) => handleApprovalClick(operation, 'reject', e)}
-                                                    className="gap-1 h-8 px-3"
+                                                    className="bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-900/50 border border-transparent hover:border-rose-200 dark:hover:border-rose-800 gap-1 h-8 px-3 shadow-none hover:shadow-sm transition-all duration-200"
                                                 >
                                                     <XCircle className="h-3.5 w-3.5" />
                                                     Reject

@@ -39,4 +39,8 @@ export interface SOPFile {
   version: string;
   isActive: boolean;
   status?: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  pendingAt?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+  rejectionComments?: string;
 }
