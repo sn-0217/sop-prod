@@ -199,7 +199,7 @@ export function PendingApprovals({ onApprovalSuccess }: PendingApprovalsProps) {
                                             {canPreview(operation) ? (
                                                 <button
                                                     onClick={(e) => handlePreviewClick(operation, e)}
-                                                    className="text-primary hover:text-primary/80 hover:underline cursor-pointer font-medium text-left"
+                                                    className="text-foreground hover:text-primary hover:underline cursor-pointer font-medium text-left"
                                                     title="Click to preview document"
                                                 >
                                                     {getDocumentName(operation)}
