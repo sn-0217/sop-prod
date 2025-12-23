@@ -213,6 +213,13 @@ const Index = () => {
     }
   };
 
+  const handleBrandChange = (brand: BrandFilter) => {
+    if (brand === selectedBrand) return;
+    setLoading(true);
+    setFiles([]); // Clear files to avoid showing stale data
+    setSelectedBrand(brand);
+  };
+
   const filteredFiles = searchMode === 'content'
     ? files
     : files.filter(file => file.fileName.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -220,7 +227,7 @@ const Index = () => {
   return (
     <div className="h-screen overflow-y-auto scrollbar-hide bg-background flex flex-col">
       {/* Brand Selector */}
-      <BrandSidebar selectedBrand={selectedBrand} onSelectBrand={setSelectedBrand} />
+      <BrandSidebar selectedBrand={selectedBrand} onSelectBrand={handleBrandChange} />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
@@ -318,7 +325,7 @@ const Index = () => {
             {selectedBrand === 'home' ? (
               <Dashboard
                 onUploadClick={() => setUploadModalOpen(true)}
-                onBrandSelect={(brand) => setSelectedBrand(brand)}
+                onBrandSelect={(brand) => handleBrandChange(brand)}
                 onApprovalComplete={() => { loadFiles(); loadPendingDeletions(); }}
               />
             ) : (
