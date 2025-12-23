@@ -218,7 +218,7 @@ const Index = () => {
     : files.filter(file => file.fileName.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen overflow-y-auto scrollbar-hide bg-background flex flex-col">
       {/* Brand Selector */}
       <BrandSidebar selectedBrand={selectedBrand} onSelectBrand={setSelectedBrand} />
 

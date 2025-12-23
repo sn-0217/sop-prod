@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { sopApi, approvalApi } from '@/services/sopApi';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Clock, Upload, FolderOpen, CheckCircle, Activity, TrendingUp, Calendar } from 'lucide-react';
+import { FileText, Clock, Upload, FolderOpen, CheckCircle, Activity, TrendingUp, Calendar, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PendingApprovals } from './PendingApprovals';
 import { ThemeToggle } from './ThemeToggle';
+import { AboutDialog } from './AboutDialog';
+
 
 interface DashboardProps {
     onUploadClick: () => void;
@@ -42,6 +44,7 @@ export function Dashboard({ onUploadClick, onBrandSelect, onApprovalComplete }: 
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [showPendingApprovals, setShowPendingApprovals] = useState(false);
     const [weeklyStats, setWeeklyStats] = useState<{ date: string, count: number, label: string }[]>([]);
+    const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
 
     useEffect(() => {
         loadStats();
@@ -206,6 +209,15 @@ export function Dashboard({ onUploadClick, onBrandSelect, onApprovalComplete }: 
                     <p className="text-muted-foreground mt-1">Welcome to SOP Management System</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    <Button
+                        onClick={() => setAboutDialogOpen(true)}
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 shrink-0"
+                        title="About"
+                    >
+                        <Info className="h-4 w-4" />
+                    </Button>
                     <ThemeToggle />
                     <Button onClick={onUploadClick} className="gap-2">
                         <Upload className="w-4 h-4" />
@@ -493,6 +505,10 @@ export function Dashboard({ onUploadClick, onBrandSelect, onApprovalComplete }: 
                     )}
                 </div>
             </div>
+            <AboutDialog
+                open={aboutDialogOpen}
+                onClose={() => setAboutDialogOpen(false)}
+            />
         </div>
     );
 }
